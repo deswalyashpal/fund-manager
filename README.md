@@ -45,7 +45,7 @@ Every open page checks `version.json` once a minute and reloads itself when a ne
 | monthly | 1st Sat 11:00 | Sat 05:30 |
 
 - **Late starts:** GitHub can start scheduled runs 5–30 minutes late. Each run still files under its scheduled slot.
-- **Manual runs:** open the repository's **Actions** tab, choose "Fund manager jobs", click "Run workflow" and pick a job.
+- **Manual runs:** open the repository's **Actions** tab, choose "Fund manager jobs" and click "Run workflow". The default, **auto**, picks the right job for the current India time.
 - **Keeping the schedule alive:** the weekly job commits a heartbeat file, because GitHub pauses schedules after 60 days without commits.
 
 ### Optional: running on a Mac instead

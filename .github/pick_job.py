@@ -11,5 +11,24 @@ CRON = {
     "30 4 * * 6": "weekly",
     "30 5 * * 6": "monthly",
 }
+
+
+def auto(now):
+    """Manual run with 'auto': the job that fits the current India time."""
+    hm = now.strftime("%H:%M")
+    if now.weekday() >= 5:
+        return "weekly"
+    if hm < "09:15":
+        return "preopen"
+    if hm < "15:30":
+        return "hourly"
+    if hm < "18:00":
+        return "close"
+    return "evening"
+
+
 schedule, manual = (sys.argv + ["", ""])[1:3]
+if manual == "auto":
+    from datetime import datetime, timedelta, timezone
+    manual = auto(datetime.now(timezone(timedelta(hours=5, minutes=30))))
 print("job=" + (manual or CRON.get(schedule, "")))

@@ -17,11 +17,11 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job to run"
+        description: "Job to run (auto = the right one for the current time)"
         required: true
-        default: preopen
+        default: auto
         type: choice
-        options: [preopen, hourly, decision, close, evening, us_close, weekly, monthly]
+        options: [auto, preopen, hourly, decision, close, evening, us_close, weekly, monthly]
 
 permissions:
   contents: write   # update the database stored as a release asset
