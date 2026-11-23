@@ -22,8 +22,28 @@ def _env():
     e.filters.update(
         n0=lambda v: "—" if v is None else f"{v:,.0f}", n1=lambda v: f"{v:,.1f}", n2=lambda v: f"{v:,.2f}",
         sgn0=lambda v: f"{v:+,.0f}", sgn1=lambda v: f"{v:+.1f}", sgn2=lambda v: f"{v:+.2f}",
-        when=_when, day=_day, md=_md)
+        when=_when, day=_day, md=_md, spark=_spark,
+        nf=lambda v, dp=0: f"{v:,.{dp}f}", nfs=lambda v, dp=0: f"{v:+,.{dp}f}",
+        dd=lambda s: pd.Timestamp(s).strftime("%-d"), mon=lambda s: pd.Timestamp(s).strftime("%b"))
     return e
+
+
+def _spark(vals, w=120, h=30):
+    """Tiny line chart for price tiles."""
+    vals = [v for v in (vals or []) if v is not None]
+    if len(vals) < 2:
+        return ""
+    lo, hi = min(vals), max(vals)
+    rng = (hi - lo) or 1
+    pts = " ".join(f"{i * w / (len(vals) - 1):.1f},{h - 2 - (v - lo) / rng * (h - 4):.1f}" for i, v in enumerate(vals))
+    col = "var(--gr)" if vals[-1] >= vals[0] else "var(--rd)"
+    return (f'<svg viewBox="0 0 {w} {h}" preserveAspectRatio="none" aria-hidden="true">'
+            f'<polyline points="{pts}" fill="none" stroke="{col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>')
+
+
+def _fc_close(p):
+    f = next((f for f in p.get("forecasts", []) if f["horizon"] == "close"), None)
+    return dict(point=f["point"], low=f["low"], high=f["high"]) if f else None
 
 
 def _when(s):
@@ -242,7 +262,7 @@ def render_all(con, p, out_dir=None):
     h, lede = headline(p)
     sig = {r["key"]: r for r in p["signals"]}
     pages = {
-        "index.html": dict(title="Summary", headline=h, lede=lede, scale=fc_scale(p), fc_made=fc_made, sig=sig),
+        "index.html": dict(title="Summary", headline=h, lede=lede, scale=fc_scale(p), fc_made=fc_made, sig=sig, fc_close=_fc_close(p)),
         "forecasts.html": dict(title="Sensex forecasts", scale=fc_scale(p), path_svg=path_svg(con, p)),
         "accuracy.html": dict(title="Actual vs predicted", sections=accuracy_sections(con), trust_table=trust_table(p["validation"])),
         "world.html": dict(title="World board", gap_svg=gap_gauge(p["divergence"]["sensex"], p["divergence"]["world"])),
@@ -268,7 +288,7 @@ def render_snap(env, out, q, sid):
     html = env.get_template("index.html").render(
         p=q, nav=NAV, stamp=stamp, banners=banners(q), root="../", methods=METHODS, live=False, page="",
         title=f"Snapshot {q['slot']}", headline=h, lede=lede, scale=fc_scale(q),
-        fc_made=max((f["made"] for f in q["forecasts"]), default=None), sig={r["key"]: r for r in q["signals"]})
+        fc_made=max((f["made"] for f in q["forecasts"]), default=None), sig={r["key"]: r for r in q["signals"]}, fc_close=_fc_close(q))
     (out / "snap" / f"{sid}.html").write_text(html)
 
 

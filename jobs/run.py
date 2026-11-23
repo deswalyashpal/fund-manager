@@ -74,7 +74,7 @@ def main(argv=None):
             return 0
         if job == "monthly":
             validate.run(con, backfill_days=0)
-        payload = build.run(job, now, slot, con)
+        payload = build.run(job, now, slot, con, online=not a.no_fetch)
         render.render_all(con, payload)
         logging.info("%s ok slot=%s forecasts=%s scored=%s", job, slot, payload["n_forecasts"], payload["n_scored"])
         print(f"{job} ok · slot {slot} · {payload['n_forecasts']} forecasts · {payload['n_scored']} scored · "

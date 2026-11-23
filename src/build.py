@@ -5,7 +5,7 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 
-from . import db, decide, forecast as fc, metals, pool, score, signals, world
+from . import db, decide, forecast as fc, india_metals, metals, news, pool, score, signals, world
 from .config import CFG, DATA, IST, R, ist, is_trading_day, next_trading_day
 from .series import Store, ewma_sigma
 from .ta_lib import indicators, pivots, score as tscore
@@ -129,7 +129,45 @@ def current_forecasts(con, now, val):
     return out
 
 
-def run(job, now, slot, con=None):
+PULSE = [("BSESN", "Sensex", "sensex", "forecasts.html", 0), ("NSEI", "Nifty 50", "sensex", "forecasts.html", 0),
+         ("USDINR", "US$ in ₹", "pool", "pool.html", 2), ("BRENT", "Brent oil $", "sensex", "world.html", 2),
+         ("INDIAVIX", "India VIX (fear)", "sensex", "world.html", 2)]
+
+
+def pulse(store, india):
+    """Small price tiles for the home page: latest value (live if the session is open), change, 3-month sparkline."""
+    out = []
+    for key, name, area, href, dp in PULSE:
+        try:
+            d = store.daily(key)
+            fin = d[d.provisional == 0]
+            last = d.iloc[-1]
+            prev = fin.close.iloc[-1] if last.provisional else fin.close.iloc[-2]
+            out.append(dict(key=key, name=name, area=area, href=href, dp=dp, value=float(last.close),
+                            chg=float(last.close - prev), pct=float((last.close / prev - 1) * 100), live=bool(last.provisional),
+                            date=str(d.index[-1].date()), spark=[round(float(v), 2) for v in fin.close.iloc[-66:]]))
+        except Exception:
+            continue
+    if india:
+        for k, name, unit in (("gold", "Gold ₹ / 10 g", "24K"), ("silver", "Silver ₹ / kg", "999")):
+            hist = india.get(f"{k}_hist") or []
+            out.insert(2 if k == "gold" else 3, dict(
+                key=k, name=name, area="metals", href="metals.html", dp=0, value=india[k], chg=india[f"{k}_chg"],
+                pct=india[f"{k}_pct"], live=False, date=str(india["date"]), session=india.get("session"),
+                spark=hist if len(hist) >= 5 else india["intl"][f"{k}_spark"], source=india["source"]))
+    return out
+
+
+def _last_payload(con):
+    r = con.execute("SELECT payload_json FROM snapshots ORDER BY made_at_ist DESC LIMIT 1").fetchone()
+    try:
+        return json.loads(r[0]) if r else {}
+    except Exception:
+        return {}
+
+
+def run(job, now, slot, con=None, online=False):
+    """online=True also reads IBJA rates, news feeds and event expectations (skipped in tests / --no-fetch)."""
     con = con or db.connect()
     store = Store(con)
     val = load_validation()
@@ -159,6 +197,19 @@ def run(job, now, slot, con=None):
     es_on = (extra.get("preopen_features") or {}).get("es_on")
     sig_rows, sig = signals.status(store, now, sxI, extra.get("preopen"), es_on, ratio["now"])
     events = decide.upcoming_events(now.date())
+    # ---- India metals, news, event expectations (free sources; keep the last good copy if a source fails)
+    last = _last_payload(con)
+    utc = now.tz_convert("UTC")
+    if online:
+        india_metals.fetch(con, utc)
+    try:
+        india = india_metals.summary(con, store)
+    except Exception:
+        india = last.get("india_metals")
+    nw = news.top_news(utc) if online else None
+    if not nw or not nw["items"]:
+        nw = dict(last.get("news") or {"items": [], "feeds_ok": [], "n_seen": 0}, stale=bool(online))
+    ev_views = news.event_views(events, store, utc, con) if online else (last.get("event_views") or events)
     # ---- decisions
     prev = {a: db.last_decision(con, a, slot) for a in ("sensex_fund", "pool", "metals")}
     calls = [decide.sensex_fund(sxI, sig, regime, events, prev["sensex_fund"][0] if prev["sensex_fund"] else None),
@@ -183,6 +234,8 @@ def run(job, now, slot, con=None):
                     adx=float(x.adx), pdi=float(x.pdi), ndi=float(x.ndi), st_line=float(x.st_line), st_up=bool(x.st_dir > 0),
                     stk=float(x.stk), pctb=float(x.pctb), atrp=float(x.atrp), hi52=float(x.hi52), lo52=float(x.lo52),
                     score=tscore(x), pivots=piv, sigma=extra.get("sigma")),
+        india_metals=_jsonable(india), news=_jsonable(nw), event_views=_jsonable(ev_views), pulse=_jsonable(pulse(store, india)),
+        sx_chart=dict(dates=[str(t.date()) for t in d.index[-260:]], closes=[round(float(v), 2) for v in d.close.iloc[-260:]]),
         world=rows_w, divergence=div, metals=dict(gold=gold, silver=silver, ratio=ratio, scenarios=metals.SCENARIOS),
         pool=pl, signals=sig_rows, signal_ctx=sig, preopen_inputs=extra.get("preopen_features"), gap_es=extra.get("gap_es"),
         insession=_jsonable(extra.get("insession")), validation=val,

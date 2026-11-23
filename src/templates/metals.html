@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block body %}
 {% set g = p.metals.gold %}{% set s = p.metals.silver %}{% set r = p.metals.ratio %}
+{% set im = p.india_metals %}
+{% if im %}
+<section class="band"><div class="wrap">
+<h2>Price in India</h2>
+<div class="kpis">
+<div class="kpi a-metals" style="border-top:3px solid var(--ac)"><div class="k">Gold 24K, per 10 g</div><div class="v">₹{{ im.gold|n0 }}</div>
+  <div class="small {{ 'up' if im.gold_chg > 0 else 'dn' }}">{{ '▲' if im.gold_chg > 0 else '▼' }} ₹{{ im.gold_chg|sgn0 }} ({{ im.gold_pct|sgn2 }}%)</div></div>
+<div class="kpi a-metals" style="border-top:3px solid var(--ac)"><div class="k">Silver 999, per kg</div><div class="v">₹{{ im.silver|n0 }}</div>
+  <div class="small {{ 'up' if im.silver_chg > 0 else 'dn' }}">{{ '▲' if im.silver_chg > 0 else '▼' }} ₹{{ im.silver_chg|sgn0 }} ({{ im.silver_pct|sgn2 }}%)</div></div>
+<div class="kpi"><div class="k">International price in ₹</div><div class="v" style="font-size:17px">₹{{ im.intl.gold|n0 }} / ₹{{ im.intl.silver|n0 }}</div>
+  <div class="small mute">gold per 10 g / silver per kg{% if im.premium %} · India {{ im.premium.gold|sgn1 }}% / {{ im.premium.silver|sgn1 }}% vs international{% endif %}</div></div>
+</div>
+<p class="src">{{ im.label }}{% if im.session %} {{ im.session }} rate of {{ im.date|day }}; change vs the {{ im.prev_session }} rate of {{ im.prev_date|day }}.{% endif %}
+Jewellers add GST and making charges. The international price (COMEX futures × USD/INR, {{ im.intl.date|day }}) excludes import duty; the gap also reflects timing and local premiums. All signals below use COMEX futures.</p>
+</div></section>
+{% endif %}
 <section class="band"><div class="wrap">
 <h2>Gold and silver</h2>
 <div class="tw"><table>

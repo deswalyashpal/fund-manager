@@ -11,14 +11,27 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from src import build, db, forecast as fc  # noqa: E402
-from src.config import DB_PATH, IST, ist  # noqa: E402
+from src.config import IST, ist  # noqa: E402
 from src.series import Store, align_daily, close_times, last_close_before  # noqa: E402
 from src.ta_lib import indicators, score  # noqa: E402
 
 
+FROZEN = ROOT / "bootstrap" / "market.db.gz"
+
+
 @pytest.fixture(scope="module")
-def store():
-    return Store(db.connect())
+def frozen_db(tmp_path_factory):
+    """Tests run on the frozen starting database (data to 23 Nov 2026 07:36 IST), never on live data."""
+    import gzip
+    p = tmp_path_factory.mktemp("db") / "market.db"
+    with gzip.open(FROZEN, "rb") as src, open(p, "wb") as dst:
+        shutil.copyfileobj(src, dst)
+    return p
+
+
+@pytest.fixture(scope="module")
+def store(frozen_db):
+    return Store(db.connect(frozen_db))
 
 
 def test_seed_indicators_match_handover(store):
@@ -64,15 +77,15 @@ def test_preopen_validation_reproduces_research(store):
         assert 70 <= s[y]["coverage"] <= 90
 
 
-def test_widened_gap_range_passes():
-    T = fc.daily_targets(Store(db.connect()))
+def test_widened_gap_range_passes(store):
+    T = fc.daily_targets(store)
     assert 70 <= fc.daily_coverage(T, 1.25)["next_open"]["coverage"] <= 90
 
 
-def test_job_rerun_is_idempotent(tmp_path):
+def test_job_rerun_is_idempotent(tmp_path, frozen_db):
     """Running the same slot twice leaves one set of rows."""
     p = tmp_path / "m.db"
-    shutil.copy(DB_PATH, p)
+    shutil.copy(frozen_db, p)
     con = db.connect(p)
     now = pd.Timestamp("2026-11-23 07:36").tz_localize(IST)
     for _ in range(2):

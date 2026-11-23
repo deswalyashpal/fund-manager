@@ -70,9 +70,25 @@ forecast:
 
 # Upcoming events (lump-sum caution window). Confirm dates on the official calendars.
 events:
-  - {date: "2026-12-04", name: "RBI policy decision (MPC 2-4 Dec)", confirmed: true}
-  - {date: "2026-12-09", name: "US Fed decision (8-9 Dec)", confirmed: true}
-  - {date: "2026-12-14", name: "India CPI release (around 12-14 Dec, confirm on MOSPI)", confirmed: false}
+  - {date: "2026-12-04", name: "RBI policy decision (MPC 2-4 Dec)", confirmed: true, kind: rbi}
+  - {date: "2026-12-09", name: "US Fed decision (8-9 Dec)", confirmed: true, kind: fed}
+  - {date: "2026-12-14", name: "India CPI release (around 12-14 Dec, confirm on MOSPI)", confirmed: false, kind: cpi_in}
+
+# Free news feeds (RSS). Headlines are picked and tagged by fixed keyword rules in src/news.py (no AI).
+news:
+  max_items: 10
+  max_age_hours: 36
+  feeds:
+    - {name: Economic Times, url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"}
+    - {name: Mint, url: "https://www.livemint.com/rss/markets"}
+    - {name: Business Standard, url: "https://www.business-standard.com/rss/markets-106.rss"}
+    - {name: CNBC, url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"}
+    - {name: MarketWatch, url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
+  # Google News searches used to read what headlines expect for each upcoming event.
+  event_queries:
+    rbi: "RBI monetary policy repo rate"
+    fed: "Federal Reserve rate decision December"
+    cpi_in: "India CPI inflation forecast"
 
 # NSE/BSE trading holidays (weekdays with no session). NOT yet verified: NSE/BSE block
 # automated requests, so please paste the official list from nseindia.com here.

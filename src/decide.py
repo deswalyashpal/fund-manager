@@ -37,7 +37,8 @@ def upcoming_events(today, days=45):
     for e in CFG.get("events") or []:
         d = pd.Timestamp(e["date"])
         if t <= d <= t + pd.Timedelta(days=days):
-            out.append(dict(date=e["date"], name=e["name"], confirmed=e.get("confirmed", False), days=(d - t).days))
+            out.append(dict(date=e["date"], name=e["name"], confirmed=e.get("confirmed", False), days=(d - t).days,
+                            kind=e.get("kind")))
     return out
 
 

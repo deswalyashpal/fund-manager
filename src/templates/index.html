@@ -1,40 +1,179 @@
 {% extends "base.html" %}{% import "macros.html" as m %}
+{% set AREA = {'sensex':'Sensex','pool':'Global pool','metals':'Gold & silver'} %}
 {% block head %}
 <h1>{{ headline }}</h1>
 <p class="lede">{{ lede }}</p>
-{{ m.calls(p.calls) }}
+{{ m.calls(p.calls, root) }}
 {% endblock %}
 {% block body %}
-<section class="band"><div class="wrap">
-<h2>Sensex: where it may be at each time</h2>
-<p class="mute">Dot = most likely level. Bar = the range it should stay within 8 times out of 10. Pink line = last official close, <b>{{ p.sensex.close|n2 }}</b> ({{ p.sensex.date|day }}). The label under each forecast says what you can rely on.</p>
-{% if p.forecasts %}{{ m.fcrows(p.forecasts, scale, p.sensex.close, 'Last close') }}
-{% else %}<p>No forecasts yet for today. They are made at 08:45 and 09:10 IST on trading days.</p>{% endif %}
-<p class="src">Forecasts: walk-forward models on Yahoo Finance data (^BSESN, ES=F, ^HSI, ^KS11). Made {{ fc_made|when }} IST. See <a href="forecasts.html">Forecasts</a> and <a href="accuracy.html">Actual vs predicted</a>.</p>
+
+{% if p.pulse %}
+<section class="band" style="padding-bottom:6px"><div class="wrap">
+<div class="sec-h"><h2>Markets now</h2><span class="small mute">Tap a tile for details · change vs previous close</span></div>
+<div class="pulse">
+{% for t in p.pulse %}
+<a class="tile a-{{ t.area }}" href="{{ root }}{{ t.href }}">
+  <div class="k"><span>{{ t.name }}</span>{% if t.live %}<span title="session still open"><span class="livedot"></span>live</span>{% elif t.session %}<span>IBJA {{ t.session }}</span>{% endif %}</div>
+  <div class="v">{% if t.key in ('gold','silver') %}₹{% endif %}{{ t.value|nf(t.dp) }}</div>
+  <div class="c {{ 'up' if t.chg > 0 else 'dn' if t.chg < 0 else 'mute' }}">{{ '▲' if t.chg > 0 else '▼' if t.chg < 0 else '•' }} {{ t.chg|nfs(t.dp) }} ({{ t.pct|sgn2 }}%)</div>
+  {{ t.spark|spark|safe }}
+</a>
+{% endfor %}
+</div>
+{% set im = p.india_metals %}
+{% if im %}<p class="src">Gold &amp; silver: {{ im.label }} {% if im.session %}{{ im.session }} rate of {{ im.date|day }}, vs {{ im.prev_session }} of {{ im.prev_date|day }}.{% endif %} Other tiles: Yahoo Finance; sparkline = last 3 months.</p>{% endif %}
+</div></section>
+{% endif %}
+
+<section class="band"><div class="wrap cols">
+<div class="card a-sensex">
+  <div class="sec-h"><h2>Sensex: price and forecast</h2>
+    <div class="seg" id="rng" role="tablist" aria-label="Chart range">{% for k in ['1M','3M','6M','1Y'] %}<button type="button" data-n="{{ {'1M':22,'3M':66,'6M':130,'1Y':260}[k] }}" {% if k == '3M' %}class="on"{% endif %}>{{ k }}</button>{% endfor %}</div></div>
+  {% if p.sx_chart %}
+  <div class="chart" id="sxchart"><div class="tip" id="sxtip"></div></div>
+  <div class="legend"><span><i style="background:var(--sx)"></i>Sensex close</span>
+    {% if fc_close %}<span><i style="background:var(--rngc)"></i>Today's close forecast range</span>{% endif %}
+    <span><i style="background:var(--rd);height:2px"></i>Exit line {{ p.calls[0].exit_line|n0 }}</span></div>
+  {% endif %}
+  <p class="src">Touch or hover the chart to read a date. The exit line comes from the Sensex fund call above: a close below it means review.</p>
+</div>
+<div class="card a-sensex">
+  <div class="sec-h"><h2>Where the Sensex may be</h2>
+    {% set today_h = ['h1','h3','close'] %}{% set has_today = (p.forecasts|selectattr('horizon','in',today_h)|list)|length > 0 %}
+    <div class="seg" id="fctabs"><button type="button" data-g="today" {% if has_today %}class="on"{% endif %}>Today</button><button type="button" data-g="later" {% if not has_today %}class="on"{% endif %}>Coming days</button></div></div>
+  <p class="small mute" style="margin-bottom:4px">Dot = most likely · bar = range it should stay within 8 times in 10 · pink line = last close <b>{{ p.sensex.close|n0 }}</b>. Tap a label to see how far to trust it.</p>
+  {% if p.forecasts %}
+  {% set f_today = p.forecasts|selectattr('horizon','in',today_h)|list %}{% set f_later = p.forecasts|rejectattr('horizon','in',today_h)|list %}
+  <div data-grp="today" {% if not has_today %}hidden{% endif %}>{% if f_today %}{{ m.fcrows(f_today, scale, p.sensex.close, 'Last close') }}{% else %}<p class="mute">No intraday forecasts right now (made 08:45–15:20 IST on trading days).</p>{% endif %}</div>
+  <div data-grp="later" {% if has_today %}hidden{% endif %}>{% if f_later %}{{ m.fcrows(f_later, scale, p.sensex.close, 'Last close') }}{% else %}<p class="mute">No multi-day forecasts right now.</p>{% endif %}</div>
+  {% else %}<p>No forecasts yet for today. They are made at 08:45 and 09:10 IST on trading days.</p>{% endif %}
+  <p class="src"><a href="{{ root }}forecasts.html">All forecasts</a> · <a href="{{ root }}accuracy.html">How accurate they have been</a></p>
+</div>
 </div></section>
 
-<section class="band panel"><div class="wrap grid2">
-<div>
-<h2>Coming up</h2>
-{% if p.events %}<table>{% for e in p.events %}<tr><td>{{ e.date|day }}</td><td>{{ e.name }}{% if not e.confirmed %} <span class="mute">(date to confirm)</span>{% endif %}</td><td class="n">in {{ e.days }} days</td></tr>{% endfor %}</table>
-<p class="small mute">No lump sums in the 2 days around these dates.</p>{% else %}<p>No events in the next 45 days in the calendar.</p>{% endif %}
-<h3 style="margin-top:18px">Today's checklist</h3>
+<section class="band panel"><div class="wrap cols">
+<div class="card">
+  <div class="sec-h"><h2>Coming up</h2><span class="small mute">No lump sums in the 2 days around these</span></div>
+  {% set evs = p.event_views or p.events %}
+  {% for e in evs %}
+  <div class="ev">
+    <div class="date"><b>{{ e.date|dd }}</b><span>{{ e.date|mon }}</span></div>
+    <div>
+      <h3>{{ e.name }}</h3>
+      <div class="small mute">in {{ e.days }} days{% if not e.confirmed %} · date to confirm{% endif %}</div>
+      {% if e.expect %}
+      <div class="exp"><span class="basis">{{ {'market':'Market pricing','headlines':'What headlines expect','none':'Expectation'}[e.expect.basis] }}</span><br>{{ e.expect.text }}</div>
+      {% set od = (e.headlines or {}).odds %}
+      {% if od %}<div class="odds" title="{{ od.pct }}%"><i style="width:{{ od.pct }}%"></i></div><div class="small mute">Headline odds: {{ od.pct }}% — <a href="{{ od.link }}" target="_blank" rel="noopener">{{ od.source }}</a></div>{% endif %}
+      {% if e.kind == 'fed' and e.expect.basis == 'market' and e.headlines %}<div class="small mute">Headlines: {{ e.headlines.text }}</div>{% endif %}
+      {% if e.expect.example %}<div class="small mute">e.g. <a href="{{ e.expect.example.link }}" target="_blank" rel="noopener">{{ e.expect.example.title }}</a> ({{ e.expect.example.source }})</div>{% endif %}
+      {% endif %}
+      {% if e.typical %}
+      <details class="more"><summary>What it could mean for you</summary>
+        <div class="scn">
+          <div><b>If as expected:</b> {{ e.typical.expected }}</div>
+          {% for name, effs, txt in e.typical.surprise %}<div><b>{{ name }}:</b> {{ txt }}<br>{% for a, d in effs %}{{ m.arrow(a, d) }} {% endfor %}</div>{% endfor %}
+        </div>
+        <p class="src">Typical past reactions, not a forecast.</p>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}<p class="mute">No events in the next 45 days in the calendar.</p>{% endfor %}
+</div>
+
+<div class="card">
+  <div class="sec-h"><h2>Top news</h2><span class="small mute">{{ ((p.news or {})['items'] or [])|length }} key stories · last 36 h</span></div>
+  {% if p.news and p.news['items'] %}
+  <div class="filt" id="nf"><button type="button" class="on" data-a="all">All</button>{% for k, v in AREA.items() %}<button type="button" data-a="{{ v }}">{{ v }}</button>{% endfor %}</div>
+  <ol class="news">
+  {% for n in p.news['items'] %}
+  <li data-areas="{{ n.effects|map(attribute='area')|join('|') }}">
+    <div>
+      <a class="h" href="{{ n.link }}" target="_blank" rel="noopener">{{ n.title }}</a>
+      <div class="meta"><span>{{ n.source }}{% if n.n_sources > 1 %} +{{ n.n_sources - 1 }} more{% endif %}</span><span>· {{ n.when|when }}</span><span class="tag">{{ n.topic_name }}</span></div>
+      <div>{% for e in n.effects %}{{ m.arrow(e.area, e.dir) }} {% endfor %}</div>
+      <p class="imp">{{ n.impact }}</p>
+    </div>
+  </li>
+  {% endfor %}
+  </ol>
+  <p class="src">Picked and tagged by fixed keyword rules from free feeds ({{ p.news.feeds_ok|join(', ') }}). Arrows show the usual effect of this kind of news, not a forecast.{% if p.news.stale %} News feeds were unavailable this run; showing the last good list.{% endif %}</p>
+  {% else %}<p class="mute">No news yet. It is collected at each scheduled update.</p>{% endif %}
+</div>
+</div></section>
+
+<section class="band"><div class="wrap cols">
+<div class="card">
+<h2>Today's checklist</h2>
 <ul>
-<li><b>Daily:</b> check the Sensex exit line ({{ p.calls[0].exit_line|n0 }}) and today's forecasts.</li>
+<li><b>Daily:</b> Sensex close vs the exit line ({{ p.calls[0].exit_line|n0 }}).</li>
 <li><b>2:15 pm:</b> {{ sig.check_215.status }}.</li>
 <li><b>Weekly (Fri close):</b> markets vs their 100-day average; restore half weight to any market back above it.</li>
 <li><b>Monthly:</b> base weights reset, models retrained.</li>
 </ul>
 </div>
-<div>
+<div class="card">
 <h2>At a glance</h2>
 <div class="kpis">
-<div class="kpi"><div class="k">Sensex trend score</div><div class="v">{{ p.sensex.score }}/10</div><div class="small mute">RSI {{ p.sensex.rsi|round(1) }}</div></div>
-<div class="kpi"><div class="k">World trend score (8 foreign)</div><div class="v">{{ p.divergence.world }}/10</div><div class="small mute">gap {{ p.divergence.gap }}</div></div>
-<div class="kpi"><div class="k">Pool invested</div><div class="v">{{ p.pool.invested }}%</div><div class="small mute">liquid {{ p.pool.liquid }}%</div></div>
-<div class="kpi"><div class="k">Gold / silver ratio</div><div class="v">{{ p.metals.ratio.now }}</div><div class="small mute">avg {{ p.metals.ratio.mean }}</div></div>
+<a class="kpi a-sensex" href="{{ root }}forecasts.html" style="text-decoration:none;color:inherit"><div class="k">Sensex trend score</div><div class="v">{{ p.sensex.score }}/10</div><div class="small mute">RSI {{ p.sensex.rsi|round(1) }}</div></a>
+<a class="kpi a-pool" href="{{ root }}world.html" style="text-decoration:none;color:inherit"><div class="k">World trend (8 markets)</div><div class="v">{{ p.divergence.world }}/10</div><div class="small mute">gap {{ p.divergence.gap }}</div></a>
+<a class="kpi a-pool" href="{{ root }}pool.html" style="text-decoration:none;color:inherit"><div class="k">Pool invested</div><div class="v">{{ p.pool.invested }}%</div><div class="small mute">liquid {{ p.pool.liquid }}%</div></a>
+<a class="kpi a-metals" href="{{ root }}metals.html" style="text-decoration:none;color:inherit"><div class="k">Gold / silver ratio</div><div class="v">{{ p.metals.ratio.now }}</div><div class="small mute">avg {{ p.metals.ratio.mean }}</div></a>
 </div>
-<p class="src">Sensex: official close {{ p.sensex.date|day }}. World board: latest bar per market{% if p.data_through.live_asia %}; {{ p.data_through.live_asia|join(', ') }} still trading (live, not a close){% endif %}. Metals: COMEX futures.</p>
 </div>
 </div></section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+/* tabs: forecasts today / coming days */
+var ft=document.getElementById("fctabs");
+if(ft)ft.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+ ft.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
+ document.querySelectorAll("[data-grp]").forEach(function(g){g.hidden=g.getAttribute("data-grp")!==b.dataset.g})});
+/* news filter */
+var nf=document.getElementById("nf");
+if(nf)nf.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+ nf.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
+ document.querySelectorAll("ol.news li").forEach(function(li){li.hidden=b.dataset.a!=="all"&&li.dataset.areas.split("|").indexOf(b.dataset.a)<0})});
+/* interactive Sensex chart */
+var D={{ (p.sx_chart or {})|tojson }},FC={{ fc_close|tojson }},EXIT={{ p.calls[0].exit_line|tojson }};
+var box=document.getElementById("sxchart");if(!box||!D.closes)return;
+var tip=document.getElementById("sxtip"),N=66;
+var fmt=function(v){return v.toLocaleString("en-IN",{maximumFractionDigits:0})};
+var mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var dl=function(s){var p=s.split("-");return +p[2]+" "+mon[+p[1]-1]};
+function draw(){
+ var c=D.closes.slice(-N),d=D.dates.slice(-N),W=Math.max(300,box.clientWidth||640),H=W<520?230:280,L=50,R=FC?40:8,T=12,B=24;
+ var vals=c.slice();if(FC)vals.push(FC.low,FC.high);if(EXIT)vals.push(EXIT);
+ var lo=Math.min.apply(0,vals),hi=Math.max.apply(0,vals),pd=(hi-lo)*.06||1;lo-=pd;hi+=pd;
+ var X=function(i){return L+(W-L-R)*i/(c.length-1)},Y=function(v){return T+(H-T-B)*(1-(v-lo)/(hi-lo))};
+ var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sensex closing prices">';
+ for(var k=0;k<5;k++){var v=lo+(hi-lo)*k/4;s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+fmt(v)+'</text>'}
+ var step=Math.max(1,Math.round(c.length/(W<520?3:5)));for(var i=0;i<c.length;i+=step)s+='<text x="'+X(i)+'" y="'+(H-6)+'" text-anchor="middle">'+dl(d[i])+'</text>';
+ if(EXIT)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(EXIT)+'" y2="'+Y(EXIT)+'" stroke="var(--rd)" stroke-dasharray="5 4"/>';
+ var pts=c.map(function(v,i){return X(i)+","+Y(v)}).join(" ");
+ s+='<polygon points="'+L+','+(H-B)+' '+pts+' '+(W-R)+','+(H-B)+'" fill="var(--sx)" opacity=".08"/>';
+ s+='<polyline points="'+pts+'" fill="none" stroke="var(--sx)" stroke-width="2.2" stroke-linejoin="round"/>';
+ if(FC){var x=W-R+22;s+='<rect x="'+(x-7)+'" y="'+Y(FC.high)+'" width="14" height="'+Math.max(2,Y(FC.low)-Y(FC.high))+'" rx="4" fill="var(--rngc)"/><circle cx="'+x+'" cy="'+Y(FC.point)+'" r="5" fill="var(--blue)"/><line x1="'+X(c.length-1)+'" x2="'+x+'" y1="'+Y(c[c.length-1])+'" y2="'+Y(FC.point)+'" stroke="var(--blue)" stroke-dasharray="3 3"/>'}
+ s+='<line id="sxx" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--mute)" stroke-width="1" visibility="hidden"/><circle id="sxd" r="4.5" fill="var(--sx)" stroke="var(--card)" stroke-width="2" visibility="hidden"/></svg>';
+ box.innerHTML=s;box.appendChild(tip);
+ var svg=box.querySelector("svg"),vx=box.querySelector("#sxx"),vd=box.querySelector("#sxd");
+ function at(ev){var r=svg.getBoundingClientRect(),px=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width*W;
+  var i=Math.max(0,Math.min(c.length-1,Math.round((px-L)/(W-L-R)*(c.length-1))));
+  vx.setAttribute("x1",X(i));vx.setAttribute("x2",X(i));vx.setAttribute("visibility","visible");
+  vd.setAttribute("cx",X(i));vd.setAttribute("cy",Y(c[i]));vd.setAttribute("visibility","visible");
+  var ch=i>0?(c[i]/c[i-1]-1)*100:0;tip.style.display="block";tip.style.left=(X(i)/W*100)+"%";tip.style.top=(Y(c[i])/H*r.height)+"px";
+  tip.textContent=dl(d[i])+": "+fmt(c[i])+" ("+(ch>=0?"+":"")+ch.toFixed(2)+"%)"}
+ function off(){tip.style.display="none";vx.setAttribute("visibility","hidden");vd.setAttribute("visibility","hidden")}
+ svg.addEventListener("mousemove",at);svg.addEventListener("touchstart",at,{passive:true});svg.addEventListener("touchmove",at,{passive:true});
+ svg.addEventListener("mouseleave",off);svg.addEventListener("touchend",function(){setTimeout(off,1500)});
+}
+document.getElementById("rng").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+ this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});N=+b.dataset.n;draw()});
+draw();var rt;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(draw,150)});
+})();
+</script>
 {% endblock %}

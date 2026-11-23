@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS pool_weights(
 CREATE TABLE IF NOT EXISTS quality(
   run_id TEXT, ticker TEXT, last_ts TEXT, stale INTEGER, mismatch_pct REAL, note TEXT,
   PRIMARY KEY(run_id, ticker));
+CREATE TABLE IF NOT EXISTS ibja(
+  date TEXT, session TEXT, gold999 REAL, silver999 REAL, fetched_at TEXT, PRIMARY KEY(date, session));
+CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY, value TEXT, updated TEXT);
 CREATE INDEX IF NOT EXISTS ix_fc_target ON forecasts(target_ts_ist);
 CREATE INDEX IF NOT EXISTS ix_snap_time ON snapshots(made_at_ist);
 """

@@ -1,3 +1,7 @@
+{% macro arrow(area, d) -%}
+{% set an = {'Sensex':'sensex','Global pool':'pool','Gold & silver':'metals'} %}<span class="a-{{ an.get(area,'sensex') }}"><span class="tag">{{ area }} <span class="ar">{{ '▲' if d > 0 else '▼' if d < 0 else '●' }}</span><span style="position:absolute;left:-9999px">{{ 'up' if d > 0 else 'down' if d < 0 else 'watch' }}</span></span></span>
+{%- endmacro %}
+
 {% macro chip(level, name) -%}
 <span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[level] }}">{{ name }}</span>
 {%- endmacro %}
@@ -17,21 +21,23 @@
     <span class="hi" style="left:{{ l + w }}%;transform:translateX(-100%)">{{ f.high|n0 }}</span>
   </div>
   <div class="val"><b>{{ f.point|n0 }}</b>
-    <span class="{{ 'up' if f.chg > 0 else 'dn' }}">{{ f.chg|sgn2 }}%</span>{% if f.p_up is not none %} <span class="mute">· {{ (f.p_up*100)|round|int }}% chance up</span>{% endif %}<br>
+    <span class="{{ 'up' if f.chg > 0 else 'dn' }}">{{ f.chg|sgn2 }}%</span> <span class="mute rtxt">· range {{ f.low|n0 }}–{{ f.high|n0 }}</span>{% if f.p_up is not none %} <span class="mute">· {{ (f.p_up*100)|round|int }}% chance up</span>{% endif %}<br>
     {% if f.actual %}<div class="tline"><b>Actual {{ f.actual|n0 }}</b></div>{% endif %}
   </div>
-  <div class="trust">{{ chip(f.trust, f.trust_name) }} <span class="tline">{{ f.trust_text }}</span></div>
+  <details class="trust"><summary>{{ chip(f.trust, f.trust_name) }} <span class="tline" style="display:inline">· why?</span></summary><span class="tline">{{ f.trust_text }}</span></details>
 </div>
 {% endfor %}
 {%- endmacro %}
 
-{% macro calls(cs) -%}
+{% macro calls(cs, root='') -%}
 <div class="calls">
 {% for c in cs %}
+{% set ar = {'sensex_fund':('sensex','Sensex','forecasts.html'),'pool':('pool','Global pool','pool.html'),'metals':('metals','Gold & silver','metals.html')}[c.area] %}
 <div class="call {{ {'green':'g','amber':'a','red':'r'}[c.light] }}">
-  <div class="who">{{ c.title }}</div>
+  <div class="who"><span>{{ c.title }}</span><span class="a-{{ ar[0] }}"><span class="tag">{{ ar[1] }}</span></span></div>
   <div class="what">{{ c.action }}</div>
   <ul>{% for b in c.bullets %}<li>{{ b|md }}</li>{% endfor %}</ul>
+  <a class="more" href="{{ root }}{{ ar[2] }}">Details →</a>
   <div class="chg">{% if c.prev_action is none %}First call recorded.{% elif c.changed %}<b>Changed</b> from {{ c.prev_action }} ({{ c.prev_at|when }}). Why: {{ c.reason }}{% else %}Unchanged since {{ c.prev_at|when }}. {{ c.reason }}{% endif %}</div>
 </div>
 {% endfor %}
