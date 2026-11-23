@@ -90,3 +90,10 @@ jobs:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+      # GitHub sometimes can't see a just-uploaded page bundle; wait and try once more.
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 45
+      - if: steps.deploy.outcome == 'failure'
+        id: deploy_retry
+        uses: actions/deploy-pages@v4
