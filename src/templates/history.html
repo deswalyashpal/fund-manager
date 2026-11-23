@@ -1,30 +1,60 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% block head %}<h1>History &amp; help</h1><p class="lede">Every update from the last {{ days }} days, and plain answers to common questions.</p>{% endblock %}
 {% block body %}
 <section class="band"><div class="wrap">
-<h2>Every update, last {{ days }} days</h2>
-<p class="mute">Click a row to see that update exactly as it was. All older updates stay in the database.</p>
-<div class="filters">
-<label>Date <select id="fd"><option value="">All</option>{% for d in dates %}<option>{{ d }}</option>{% endfor %}</select></label>
-<label>Job <select id="fj"><option value="">All</option>{% for j in jobs %}<option>{{ j }}</option>{% endfor %}</select></label>
-<label>Area <select id="fa"><option value="">All</option><option value="0">Sensex fund</option><option value="1">Pool</option><option value="2">Metals</option></select></label>
-<label>Only changes <input type="checkbox" id="fc"></label>
-<label>Search <input id="fq" placeholder="e.g. 14:40 or HOLD"></label>
-</div>
+<div class="sec-h"><h2>Updates</h2>
+  <div class="seg" id="hf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="chg">Only call changes</button></div></div>
+<div class="filters"><label>Day <select id="fd"><option value="">All days</option>{% for d in dates %}<option value="{{ d }}">{{ d|day }}</option>{% endfor %}</select></label></div>
+<div class="card" style="padding:6px 12px">
 <div class="tw"><table id="ht">
-<tr><th>When (IST)</th><th>Job</th><th>Sensex fund</th><th>Pool</th><th>Metals</th><th class="n">Close forecast</th><th class="n">Range</th></tr>
-{% for s in snaps %}<tr data-d="{{ s.date }}" data-j="{{ s.job }}" data-c="{{ s.changed|join(',') }}" data-t="{{ s.text }}">
-<td><a href="snap/{{ s.id }}.html">{{ s.when }}</a></td><td>{{ s.job }}</td>
-{% for c in s.calls %}<td><span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[c.light] }}">{{ c.action }}</span>{% if c.changed %} <b title="changed">●</b>{% endif %}</td>{% endfor %}
-<td class="n">{{ s.close_fc|n0 if s.close_fc else '—' }}</td><td class="n">{{ s.close_rng }}</td></tr>{% endfor %}
+<tr><th>When (IST)</th><th>Sensex</th><th>Pool</th><th>Metals</th><th class="n">Close forecast</th></tr>
+{% for s in snaps %}<tr data-d="{{ s.date }}" data-c="{{ s.changed|join(',') }}">
+<td><a href="snap/{{ s.id }}.html">{{ s.when }}</a><br><span class="small mute">{{ s.job }}</span></td>
+{% for c in s.calls %}<td><span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[c.light] }}">{{ c.action }}</span>{% if c.changed %} <b title="changed" style="color:var(--mag)">●</b>{% endif %}</td>{% endfor %}
+<td class="n">{{ s.close_fc|n0 if s.close_fc else '—' }}<br><span class="small mute">{{ s.close_rng }}</span></td></tr>{% endfor %}
 </table></div>
-<p class="src">● = call changed in that update.</p>
+</div>
+<p class="src">Tap a time to see that update exactly as it was. ● = the call changed in that update. Older updates stay in the database.</p>
+</div></section>
+
+<section class="band panel" id="help"><div class="wrap">
+<h2>Help</h2>
+<div class="cols">
+<div>
+<details class="fold" open><summary>What do the forecast labels mean?</summary><div class="in">
+<p>{{ m.chip('green', 'Direction + range') }} Up/down was right about 6 times in 10 in testing (a coin toss gets 5), and the price stayed in the range about 8 times in 10.</p>
+<p>{{ m.chip('amber', 'Range only, not direction') }} Up or down is a coin toss; the range is the useful part.</p>
+<p>{{ m.chip('red', "Don't rely on it") }} No better than guessing; shown for information only.</p>
+<p class="src">Labels are set by the monthly test and drop automatically if a record slips.</p>
+</div></details>
+<details class="fold"><summary>When would the Sensex call say sell?</summary><div class="in"><p>Only when the Sensex <b>closes</b> below the exit line (a trailing line that rises with the trend). Intraday dips don't count. Buy back on a close above it.</p></div></details>
+<details class="fold"><summary>How should I add new money?</summary><div class="in"><p>Normally, invest as planned. When the market is stretched (heat/RSI above 70), split new money into 4 equal parts, one each week. Avoid lump sums within 2 days of RBI, Fed or CPI dates. On dips of 10% / 20% from the 1-year high, add extra instalments.</p></div></details>
+<details class="fold"><summary>Why is the pool holding cash?</summary><div class="in"><p>Any market below its 100-day average (checked at the Friday close, in rupees) is held at half weight; the rest waits in a liquid fund. Tested since 2008, this roughly halved the worst fall for a small cost in return.</p></div></details>
+<details class="fold"><summary>When will the gold &amp; silver call say buy?</summary><div class="in"><p>When the price closes above its buy-signal line <b>and</b> at least 4 of 10 trend checks are positive. Buy in stages. While the gold/silver ratio is above 85, favour silver.</p></div></details>
+</div>
+<div>
+<details class="fold"><summary>Words used on this site</summary><div class="in">
+<dl class="gl">
+<dt>Trend score</dt><dd>Out of 10 simple checks, how many say "up".</dd>
+<dt>100-day average</dt><dd>Average close of the last 100 trading days (about 5 months).</dd>
+<dt>Heat (RSI)</dt><dd>0–100 gauge of how fast prices moved. Above 70 = ran up fast.</dd>
+<dt>Exit / buy-signal line</dt><dd>A trailing line (Supertrend). Close below it in an uptrend = exit; above it in a downtrend = buy.</dd>
+<dt>Range</dt><dd>Where the price should stay 8 times in 10.</dd>
+<dt>Liquid fund</dt><dd>A very low-risk debt fund used to park cash.</dd>
+<dt>IBJA rate</dt><dd>India's benchmark gold/silver rate, before GST and making charges.</dd>
+<dt>Live</dt><dd>A price from a market still trading; not a close yet.</dd>
+<dt>3 pm cut-off</dt><dd>Index-fund orders before 3:00 pm IST get that day's closing price.</dd>
+</dl>
+</div></details>
+<details class="fold"><summary>How often does this page update?</summary><div class="in"><p>On trading days at 08:45 and 09:10 (before the open), every hour from 10:20 to 15:20, at 14:40 (before the 3 pm cut-off), 16:15 (after the close), 23:30 and 03:00 IST, plus Saturday checks. Any open page reloads itself when a new update is published.</p></div></details>
+<details class="fold"><summary>Where does the data come from?</summary><div class="in"><p>Prices: Yahoo Finance. Indian gold/silver: IBJA. US Fed range: FRED. News: Economic Times, Mint, Business Standard, CNBC, MarketWatch and Google News feeds, picked by fixed rules (no AI). Research to inform decisions, not investment advice.</p></div></details>
+</div>
+</div>
 </div></section>
 <script>
-(function(){var q=function(i){return document.getElementById(i)};
-function f(){var d=q('fd').value,j=q('fj').value,a=q('fa').value,c=q('fc').checked,s=q('fq').value.toLowerCase();
-document.querySelectorAll('#ht tr[data-d]').forEach(function(r){var ch=r.dataset.c?r.dataset.c.split(','):[];
-var ok=(!d||r.dataset.d===d)&&(!j||r.dataset.j===j)&&(!c||(a?ch.indexOf(a)>=0:ch.length>0))&&(!s||r.dataset.t.toLowerCase().indexOf(s)>=0);
-r.style.display=ok?'':'none'})}
-['fd','fj','fa','fc','fq'].forEach(function(i){q(i).addEventListener('input',f);q(i).addEventListener('change',f)})})();
+(function(){var f="all",d=document.getElementById("fd");
+function go(){document.querySelectorAll("#ht tr[data-d]").forEach(function(r){r.style.display=((!d.value||r.dataset.d===d.value)&&(f==="all"||r.dataset.c))?"":"none"})}
+document.getElementById("hf").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});f=b.dataset.f;go()});
+d.addEventListener("change",go);if(location.hash==="#help")document.getElementById("help").scrollIntoView()})();
 </script>
 {% endblock %}

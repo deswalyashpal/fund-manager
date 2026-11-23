@@ -32,13 +32,17 @@
 {% macro calls(cs, root='') -%}
 <div class="calls">
 {% for c in cs %}
-{% set ar = {'sensex_fund':('sensex','Sensex','forecasts.html'),'pool':('pool','Global pool','pool.html'),'metals':('metals','Gold & silver','metals.html')}[c.area] %}
-<div class="call {{ {'green':'g','amber':'a','red':'r'}[c.light] }}">
-  <div class="who"><span>{{ c.title }}</span><span class="a-{{ ar[0] }}"><span class="tag">{{ ar[1] }}</span></span></div>
+{% set ar = {'sensex_fund':('sensex','Sensex','sensex.html'),'pool':('pool','Global pool','pool.html'),'metals':('metals','Gold & silver','metals.html')}[c.area] %}
+{% set key = (c.bullets|select('bold')|first) or c.bullets[0] %}
+<div class="call {{ {'green':'g','amber':'a','red':'r'}[c.light] }}" data-area="{{ ar[0] }}">
+  <div class="who"><span>{{ c.title }} <span class="chgb">changed</span></span><span class="a-{{ ar[0] }}"><span class="tag">{{ ar[1] }}</span></span></div>
   <div class="what">{{ c.action }}</div>
-  <ul>{% for b in c.bullets %}<li>{{ b|md }}</li>{% endfor %}</ul>
-  <a class="more" href="{{ root }}{{ ar[2] }}">Details →</a>
-  <div class="chg">{% if c.prev_action is none %}First call recorded.{% elif c.changed %}<b>Changed</b> from {{ c.prev_action }} ({{ c.prev_at|when }}). Why: {{ c.reason }}{% else %}Unchanged since {{ c.prev_at|when }}. {{ c.reason }}{% endif %}</div>
+  <p style="margin:0 0 6px;font-size:15px">{{ key|md }}</p>
+  <details class="more"><summary>Why, and what to do</summary>
+    <ul>{% for b in c.bullets if b != key %}<li>{{ b|md }}</li>{% endfor %}</ul>
+    <div class="chg">{% if c.prev_action is none %}First call recorded.{% elif c.changed %}<b>Changed</b> from {{ c.prev_action }} ({{ c.prev_at|when }}). {{ c.reason }}{% else %}Unchanged since {{ c.prev_at|when }}. {{ c.reason }}{% endif %}</div>
+  </details>
+  <a class="more" href="{{ root }}{{ ar[2] }}">Open {{ ar[1] }} →</a>
 </div>
 {% endfor %}
 </div>

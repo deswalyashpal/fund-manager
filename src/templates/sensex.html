@@ -1,0 +1,104 @@
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% set s = p.sensex %}{% set c = p.calls[0] %}
+{% block head %}
+<h1>Sensex: {{ c.action|lower }}{% if c.action == 'HOLD' %} — the trend is intact{% endif %}</h1>
+<p class="lede">{{ c.bullets|select('bold')|first|md if c.bullets|select('bold')|first else c.bullets[0]|md }}</p>
+{% if alerts %}<div class="alerts">{% for a in alerts %}<span class="al {{ a.kind }} a-{{ a.area }}"><i></i>{{ a.text }}</span>{% endfor %}</div>{% endif %}
+{% endblock %}
+{% block body %}
+{% set cl = chart.close %}{% set d1 = (cl[-1] / cl[-2] - 1) * 100 %}
+{% set gap = (s.close / c.exit_line - 1) * 100 %}
+<section class="band" style="padding-bottom:0"><div class="wrap">
+<div class="kv a-sensex">
+  <div><div class="k">Close {{ s.date|day }}</div><div class="v">{{ s.close|n0 }}</div><div class="s {{ 'up' if d1 > 0 else 'dn' }}">{{ '▲' if d1 > 0 else '▼' }} {{ d1|sgn2 }}% on the day</div></div>
+  <div><div class="k">Exit line</div><div class="v">{{ c.exit_line|n0 }}</div><div class="s {{ 'dn' if gap < 3 else 'mute' }}">{{ gap|sgn1 }}% away · sell only on a close below</div></div>
+  <div><div class="k">Trend score</div><div class="v">{{ s.score }}/10</div><div class="meter"><i style="width:{{ s.score * 10 }}%;background:{{ 'var(--gr)' if s.score >= 7 else 'var(--am)' if s.score >= 4 else 'var(--rd)' }}"></i></div></div>
+  <div><div class="k">From 1-year high</div><div class="v">{{ ((s.close / s.hi52 - 1) * 100)|sgn1 }}%</div><div class="s mute">high {{ s.hi52|n0 }} · extra buying from −10%</div></div>
+  <div><div class="k">Heat (RSI)</div><div class="v">{{ s.rsi|round|int }}</div><div class="s mute">{{ 'stretched up: stagger new money' if s.rsi > 70 else 'stretched down' if s.rsi < 30 else 'normal' }}</div></div>
+</div>
+</div></section>
+
+<section class="band"><div class="wrap cols">
+<div class="card a-sensex">
+  <div class="sec-h"><h2>Price, trend and exit line</h2>
+  <div class="seg" id="rng">{% for k, n in [('3M',66),('6M',130),('1Y',260),('2Y',520)] %}<button type="button" data-n="{{ n }}" {% if k == '6M' %}class="on"{% endif %}>{{ k }}</button>{% endfor %}</div></div>
+  <div class="chart" id="sx"></div>
+  <div class="legend"><span><i style="background:var(--sx)"></i>Close</span><span><i style="background:var(--pl)"></i>100-day average</span><span><i style="background:var(--rd)"></i>Exit line (moves up with the trend)</span>{% if fc_close %}<span><i style="background:var(--rngc)"></i>Today's close range</span>{% endif %}</div>
+  <p class="src">While the price stays above the red line, hold. The line only ever moves up in an uptrend, locking in gains.</p>
+</div>
+<div class="card a-sensex">
+  {% set today_h = ['h1','h3','close'] %}{% set f_today = p.forecasts|selectattr('horizon','in',today_h)|list %}{% set f_later = p.forecasts|rejectattr('horizon','in',today_h)|list %}
+  <div class="sec-h"><h2>Forecasts</h2>
+    <div class="seg" data-tabs="fc"><button type="button" data-k="today" {% if f_today %}class="on"{% endif %}>Today</button><button type="button" data-k="later" {% if not f_today %}class="on"{% endif %}>Coming days</button></div></div>
+  <p class="small mute" style="margin-bottom:2px">Dot = most likely · bar = where it should stay 8 times in 10 · pink = last close · tap a label for how far to trust it</p>
+  <div data-pane="fc:today" {% if not f_today %}hidden{% endif %}>{% if f_today %}{{ m.fcrows(f_today, scale, s.close, 'Last close') }}{% else %}<p class="mute">Made 08:45–15:20 IST on trading days.</p>{% endif %}</div>
+  <div data-pane="fc:later" {% if f_today %}hidden{% endif %}>{% if f_later %}{{ m.fcrows(f_later, scale, s.close, 'Last close') }}{% else %}<p class="mute">None right now.</p>{% endif %}</div>
+  <p class="src">An index-fund order placed before 3:00 pm gets today's closing price, so the day's-close range is the one that matters for timing.</p>
+</div>
+</div></section>
+
+<section class="band panel" id="track"><div class="wrap">
+<div class="sec-h"><h2>Track record</h2><span class="small mute">Every forecast is checked when its time arrives</span></div>
+<div class="cols">
+<div class="card">
+  {% if track %}
+  <h3>Day's close: forecast vs what happened (last {{ track.n }} days)</h3>
+  <div class="chart" id="tr"></div>
+  <div class="legend"><span><i style="background:var(--rngc)"></i>Forecast range</span><span><i style="background:var(--blue)"></i>Forecast</span><span><i style="background:var(--ink)"></i>Actual close</span></div>
+  <p style="margin-top:8px"><b>Inside the range {{ track.inside }} of {{ track.n }} days</b> (aim: about 8 in 10) · direction right {{ track.right }} of {{ track.n }}.</p>
+  {% else %}<p class="mute">Not enough checked forecasts yet.</p>{% endif %}
+</div>
+<div class="card">
+  <h3>Scorecard, last 20 checked per forecast</h3>
+  {% set seen = [] %}
+  {% for r in p.accuracy|sort(attribute='n', reverse=True) if r.label not in seen %}{% if seen.append(r.label) %}{% endif %}
+  <div style="padding:8px 0;border-bottom:1px solid var(--line)">
+    <div style="display:flex;justify-content:space-between;gap:8px"><b>{{ r.label }}</b><span class="small mute">{{ r.n }} checked</span></div>
+    {% if r.n >= 5 %}
+    <div class="small">Inside range {{ r.coverage }}%<div class="meter"><i style="width:{{ r.coverage }}%;background:{{ 'var(--gr)' if 70 <= r.coverage <= 95 else 'var(--am)' }}"></i></div></div>
+    <div class="small">Direction right {{ r.hit }}%<div class="meter"><i style="width:{{ r.hit }}%;background:{{ 'var(--gr)' if r.hit >= 58 else 'var(--am)' if r.hit >= 45 else 'var(--rd)' }}"></i></div></div>
+    {% else %}<div class="small mute">Only {{ r.n }} checked so far: too few to judge. Scores appear after 5.</div>{% endif %}
+  </div>
+  {% endfor %}
+  <p class="src">Green range bar = the range is doing its job. Direction near 50% = a coin toss; rely on the range instead.</p>
+</div>
+</div>
+
+<details class="fold"><summary>How each forecast was tested (sets its trust label)</summary><div class="in">
+<div class="tw"><table>
+<tr><th>Forecast</th><th>Tested on</th><th class="n">Direction right</th><th class="n">Coin flip</th><th class="n">Range held</th><th>Label</th></tr>
+{% for t in trust_table %}<tr><td>{{ t.name }}</td><td class="small">{{ t.n }} · {{ t.period }}</td><td class="n">{{ t.hit }}</td><td class="n">{{ t.base }}</td><td class="n small">{{ t.cov }}</td><td>{{ m.chip(t.level, t.label) }}</td></tr>{% endfor %}
+</table></div>
+<p class="src">Walk-forward tests: each month's forecasts used only earlier data. Re-run monthly; a label drops if its record slips.</p>
+</div></details>
+
+<details class="fold"><summary>Technical details</summary><div class="in">
+<div class="tw"><table>
+<tr><td>Averages 20 / 50 / 100 / 200 days</td><td class="n">{{ s.sma20|n0 }} / {{ s.sma50|n0 }} / {{ s.sma100|n0 }} / {{ s.sma200|n0 }}</td></tr>
+<tr><td>MACD / signal / histogram</td><td class="n">{{ s.macd|n0 }} / {{ s.macds|n0 }} / {{ s.macdh|sgn0 }}</td></tr>
+<tr><td>ADX / +DI / −DI</td><td class="n">{{ s.adx|round(1) }} / {{ s.pdi|round(1) }} / {{ s.ndi|round(1) }}</td></tr>
+<tr><td>Stochastic %K · Bollinger %B · ATR</td><td class="n">{{ s.stk|round(1) }} · {{ s.pctb|round(2) }} · {{ (s.atrp*100)|round(2) }}%</td></tr>
+<tr><td>Pivots next session (S2 / S1 / P / R1 / R2)</td><td class="n">{{ s.pivots.S2|n0 }} / {{ s.pivots.S1|n0 }} / {{ s.pivots.P|n0 }} / {{ s.pivots.R1|n0 }} / {{ s.pivots.R2|n0 }}</td></tr>
+{% if p.preopen_inputs %}<tr><td>Morning forecast inputs: US futures / Hang Seng / KOSPI / Sensex yesterday</td><td class="n">{{ (p.preopen_inputs.es_on*100)|sgn2 }}% / {{ (p.preopen_inputs.hs_am*100)|sgn2 }}% / {{ (p.preopen_inputs.ks_am*100)|sgn2 }}% / {{ (p.preopen_inputs.prev_ret*100)|sgn2 }}%</td></tr>{% endif %}
+</table></div>
+<h3 style="margin-top:14px">Signals right 70%+ of the time</h3>
+<div class="tw"><table>
+<tr><th>Signal</th><th>Predicts</th><th class="n">Right</th><th>Today</th><th>Use it for</th></tr>
+{% for r in p.signals %}<tr><td><b>{{ r.name }}</b></td><td class="small">{{ r.predicts }}</td><td class="n">{{ r.right }}</td><td class="small">{{ r.status }}</td><td class="small">{{ r.use }}</td></tr>{% endfor %}
+</table></div>
+<p class="src">None of these predicts tomorrow's or next week's direction with 70% accuracy; they describe risk, today's close, or multi-year odds.</p>
+</div></details>
+</div></section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var C={{ chart|tojson }},FC={{ fc_close|tojson }};
+IC.make(document.getElementById("sx"),{dates:C.dates,n:130,fc:FC,label:"Sensex with 100-day average and exit line",series:[
+ {name:"Close",v:C.close,color:"var(--sx)",w:2.2,fill:1},{name:"100-day avg",v:C.ma100,color:"var(--pl)",w:1.6},{name:"Exit line",v:C.exit,color:"var(--rd)",w:1.4,dash:"5 4"}]},document.getElementById("rng"));
+var T={{ track|tojson }};
+if(T)IC.make(document.getElementById("tr"),{dates:T.dates,h:240,label:"Forecast vs actual",band:{lo:T.low,hi:T.high},series:[
+ {name:"Forecast",v:T.point,color:"var(--blue)",w:1.4,dash:"4 3",dots:1},{name:"Actual",v:T.actual,color:"var(--ink)",w:2,dots:1}]});
+})();
+</script>
+{% endblock %}

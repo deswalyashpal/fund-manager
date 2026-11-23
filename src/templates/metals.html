@@ -1,48 +1,76 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% set g = p.metals.gold %}{% set s = p.metals.silver %}{% set r = p.metals.ratio %}{% set c = p.calls[2] %}{% set im = p.india_metals %}
+{% block head %}
+<h1>Gold &amp; silver: {{ c.action|lower }}</h1>
+<p class="lede">{{ c.bullets[0]|md }}</p>
+{% if alerts %}<div class="alerts">{% for a in alerts %}<span class="al {{ a.kind }} a-{{ a.area }}"><i></i>{{ a.text }}</span>{% endfor %}</div>{% endif %}
+{% endblock %}
 {% block body %}
-{% set g = p.metals.gold %}{% set s = p.metals.silver %}{% set r = p.metals.ratio %}
-{% set im = p.india_metals %}
+<section class="band" style="padding-bottom:0"><div class="wrap">
+<div class="kv a-metals">
 {% if im %}
-<section class="band"><div class="wrap">
-<h2>Price in India</h2>
-<div class="kpis">
-<div class="kpi a-metals" style="border-top:3px solid var(--ac)"><div class="k">Gold 24K, per 10 g</div><div class="v">₹{{ im.gold|n0 }}</div>
-  <div class="small {{ 'up' if im.gold_chg > 0 else 'dn' }}">{{ '▲' if im.gold_chg > 0 else '▼' }} ₹{{ im.gold_chg|sgn0 }} ({{ im.gold_pct|sgn2 }}%)</div></div>
-<div class="kpi a-metals" style="border-top:3px solid var(--ac)"><div class="k">Silver 999, per kg</div><div class="v">₹{{ im.silver|n0 }}</div>
-  <div class="small {{ 'up' if im.silver_chg > 0 else 'dn' }}">{{ '▲' if im.silver_chg > 0 else '▼' }} ₹{{ im.silver_chg|sgn0 }} ({{ im.silver_pct|sgn2 }}%)</div></div>
-<div class="kpi"><div class="k">International price in ₹</div><div class="v" style="font-size:17px">₹{{ im.intl.gold|n0 }} / ₹{{ im.intl.silver|n0 }}</div>
-  <div class="small mute">gold per 10 g / silver per kg{% if im.premium %} · India {{ im.premium.gold|sgn1 }}% / {{ im.premium.silver|sgn1 }}% vs international{% endif %}</div></div>
-</div>
-<p class="src">{{ im.label }}{% if im.session %} {{ im.session }} rate of {{ im.date|day }}; change vs the {{ im.prev_session }} rate of {{ im.prev_date|day }}.{% endif %}
-Jewellers add GST and making charges. The international price (COMEX futures × USD/INR, {{ im.intl.date|day }}) excludes import duty; the gap also reflects timing and local premiums. All signals below use COMEX futures.</p>
-</div></section>
+  <div><div class="k">Gold 24K, per 10 g</div><div class="v">₹{{ im.gold|n0 }}</div><div class="s {{ 'up' if im.gold_chg > 0 else 'dn' }}">{{ '▲' if im.gold_chg > 0 else '▼' }} ₹{{ im.gold_chg|sgn0 }} ({{ im.gold_pct|sgn2 }}%)</div></div>
+  <div><div class="k">Silver 999, per kg</div><div class="v">₹{{ im.silver|n0 }}</div><div class="s {{ 'up' if im.silver_chg > 0 else 'dn' }}">{{ '▲' if im.silver_chg > 0 else '▼' }} ₹{{ im.silver_chg|sgn0 }} ({{ im.silver_pct|sgn2 }}%)</div></div>
 {% endif %}
-<section class="band"><div class="wrap">
-<h2>Gold and silver</h2>
+  {% for x, nm, dp in [(g,'Gold',0),(s,'Silver',2)] %}{% set away = (x.st_line / x.close - 1) * 100 %}
+  <div><div class="k">{{ nm }} buy signal</div><div class="v" style="font-size:17px">{{ 'Active' if x.st_up and x.score >= 4 else 'Not yet' }}</div>
+    <div class="s mute">{% if x.st_up %}above its line; trend {{ x.score }}/10{% else %}needs a close above ${{ x.st_line|nf(dp) }} ({{ away|sgn1 }}%){% endif %}</div></div>
+  {% endfor %}
+</div>
+{% if im %}<p class="src">{{ im.label }}{% if im.session %} {{ im.session }} rate of {{ im.date|day }} vs the {{ im.prev_session }} rate of {{ im.prev_date|day }}.{% endif %} Jewellers add GST and making charges.</p>{% endif %}
+</div></section>
+
+<section class="band"><div class="wrap cols">
+<div class="card a-metals">
+  <div class="sec-h"><h2 id="mt">Gold</h2>
+    <div class="seg" id="pick">{% for k, lab in [('gold','Gold'),('silver','Silver'),('ratio','Gold/silver ratio')] %}<button type="button" data-k="{{ k }}" {% if loop.first %}class="on"{% endif %}>{{ lab }}</button>{% endfor %}</div></div>
+  <div class="chart" id="mc"></div>
+  <div class="legend" id="mleg"></div>
+  <div class="seg" id="rng" style="margin-top:8px">{% for k, n in [('3M',66),('6M',130),('1Y',260),('2Y',520)] %}<button type="button" data-n="{{ n }}" {% if k == '1Y' %}class="on"{% endif %}>{{ k }}</button>{% endfor %}</div>
+</div>
+<div class="card a-metals">
+  <h2>What to do</h2>
+  <ul>{% for b in c.bullets %}<li>{{ b|md }}</li>{% endfor %}</ul>
+  <h3 style="margin-top:14px">Gold/silver ratio: {{ r.now }}</h3>
+  <p>One ounce of gold buys {{ r.now }} ounces of silver, higher than on {{ r.pct_below }}% of days since {{ r.since }}. After readings above 85, silver beat gold over the next 6 months on average ({{ r.analog_silver|sgn1 }}% vs {{ r.analog_gold|sgn1 }}%). So when the buy signal comes, lean to silver.</p>
+  <p class="src">Signals use COMEX futures (New York) because they trade almost round the clock; Indian prices follow them closely.</p>
+</div>
+</div>
+<div class="wrap">
+<details class="fold"><summary>Technical details (COMEX futures)</summary><div class="in">
 <div class="tw"><table>
 <tr><th></th><th class="n">Gold</th><th class="n">Silver</th></tr>
-<tr><td>Price (COMEX futures){% if g.live %} <span class="live">LIVE — session still open</span>{% endif %}</td><td class="n"><b>${{ g.close|n1 }}</b></td><td class="n"><b>${{ s.close|n2 }}</b></td></tr>
-<tr><td>Since last settled price</td><td class="n">{{ g.chg_since_last_final|sgn2 }}%</td><td class="n">{{ s.chg_since_last_final|sgn2 }}%</td></tr>
+<tr><td>Price{% if g.live %} <span class="live">live</span>{% endif %}</td><td class="n">${{ g.close|n1 }}</td><td class="n">${{ s.close|n2 }}</td></tr>
 <tr><td>Last 5 sessions</td><td class="n">{{ g.chg5|sgn2 }}%</td><td class="n">{{ s.chg5|sgn2 }}%</td></tr>
 <tr><td>From 1-yr high</td><td class="n">{{ g.from_high }}%</td><td class="n">{{ s.from_high }}%</td></tr>
-<tr><td>Trend score</td><td class="n">{{ g.score }} / 10</td><td class="n">{{ s.score }} / 10</td></tr>
-<tr><td>RSI</td><td class="n">{{ g.rsi }} ({{ g.rsi_label|lower }})</td><td class="n">{{ s.rsi }} ({{ s.rsi_label|lower }})</td></tr>
-<tr><td>Buy-signal line (Supertrend)</td><td class="n">${{ g.st_line|n0 }}</td><td class="n">${{ s.st_line|n2 }}</td></tr>
+<tr><td>Trend score · RSI</td><td class="n">{{ g.score }}/10 · {{ g.rsi }}</td><td class="n">{{ s.score }}/10 · {{ s.rsi }}</td></tr>
 <tr><td>50 / 200-day average</td><td class="n">${{ g.sma50|n0 }} / ${{ g.sma200|n0 }}</td><td class="n">${{ s.sma50|n2 }} / ${{ s.sma200|n2 }}</td></tr>
+{% if im %}<tr><td>International price in ₹ (no duty)</td><td class="n">₹{{ im.intl.gold|n0 }}</td><td class="n">₹{{ im.intl.silver|n0 }}</td></tr>{% endif %}
 </table></div>
-<p class="src">COMEX futures (Yahoo GC=F, SI=F), bar dated {{ g.date|day }}. Futures can differ slightly from spot prices quoted in the news; all signals here use futures.</p>
-</div></section>
-<section class="band panel"><div class="wrap">
-<h2>Gold/silver ratio: {{ r.now }}</h2>
-{{ ratio_svg|safe }}
-<p>One ounce of gold buys {{ r.now }} ounces of silver. That is higher than on {{ r.pct_below }}% of days since {{ r.since }} (average {{ r.mean }}), and up from {{ r.low_1y }} on {{ r.low_1y_date|day }}.</p>
-<p>After past readings above 85, silver gained {{ r.analog_silver|sgn1 }}% on average over the next 6 months vs gold's {{ r.analog_gold|sgn1 }}%, and the ratio was lower {{ r.analog_ratio_lower }}% of the time ({{ r.analog_days }} days; all days: silver {{ r.all_silver|sgn1 }}%, gold {{ r.all_gold|sgn1 }}%). Much of that history comes from the 2020 rebound, so treat it as a tilt.</p>
-<p class="src">Daily COMEX futures 2001–now. 6 months = 120 trading days.</p>
-</div></section>
-<section class="band"><div class="wrap">
-<h2>Scenarios for the next 12–24 months</h2>
+</div></details>
+<details class="fold"><summary>Scenarios for the next 12–24 months</summary><div class="in">
 <div class="tw"><table><tr><th>Scenario</th><th class="n">Odds</th><th class="n">Gold</th><th class="n">Silver</th><th class="n">Ratio</th></tr>
 {% for x in p.metals.scenarios %}<tr><td>{{ x.name }}</td><td class="n">{{ x.odds }}</td><td class="n">{{ x.gold }}</td><td class="n">{{ x.silver }}</td><td class="n">{{ x.ratio }}</td></tr>{% endfor %}</table></div>
-<p class="src">Research view made 22 Nov 2026 (50-year review); not recomputed automatically.</p>
+<p class="src">Research view of 22 Nov 2026; not recomputed automatically.</p>
+</div></details>
 </div></section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var C={{ chart|tojson }};
+var S={gold:{t:"Gold",c:{dates:C.dates,n:260,unit:"₹",series:[{name:"Gold ₹/10 g",v:C.gold,color:"var(--mt)",w:2.2,fill:1}]},
+  leg:'<span><i style="background:var(--mt)"></i>International price in ₹ per 10 g (COMEX × USD/INR)</span>'},
+ silver:{t:"Silver",c:{dates:C.dates,n:260,unit:"₹",series:[{name:"Silver ₹/kg",v:C.silver,color:"var(--mt)",w:2.2,fill:1}]},
+  leg:'<span><i style="background:var(--mt)"></i>International price in ₹ per kg (COMEX × USD/INR)</span>'},
+ ratio:{t:"Gold/silver ratio",c:{dates:C.dates,n:260,dp:1,series:[{name:"Ratio",v:C.ratio,color:"var(--mt)",w:2.2,dp:1}],hlines:[{v:85,color:"var(--rd)"}]},
+  leg:'<span><i style="background:var(--mt)"></i>Ratio</span><span><i style="background:var(--rd);height:2px"></i>85: above it, favour silver</span>'}};
+var ch=IC.make(document.getElementById("mc"),S.gold.c,document.getElementById("rng"));
+document.getElementById("mleg").innerHTML=S.gold.leg;
+document.getElementById("pick").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+ this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});var k=S[b.dataset.k];
+ k.c.n=+document.querySelector("#rng .on").dataset.n;document.getElementById("mt").textContent=k.t;document.getElementById("mleg").innerHTML=k.leg;
+ ch.set({series:k.c.series,hlines:k.c.hlines||[],unit:k.c.unit||"",dp:k.c.dp||0,n:k.c.n})});
+})();
+</script>
 {% endblock %}

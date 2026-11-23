@@ -129,9 +129,9 @@ def current_forecasts(con, now, val):
     return out
 
 
-PULSE = [("BSESN", "Sensex", "sensex", "forecasts.html", 0), ("NSEI", "Nifty 50", "sensex", "forecasts.html", 0),
-         ("USDINR", "US$ in ₹", "pool", "pool.html", 2), ("BRENT", "Brent oil $", "sensex", "world.html", 2),
-         ("INDIAVIX", "India VIX (fear)", "sensex", "world.html", 2)]
+PULSE = [("BSESN", "Sensex", "sensex", "sensex.html", 0), ("NSEI", "Nifty 50", "sensex", "sensex.html", 0),
+         ("USDINR", "US$ in ₹", "pool", "pool.html", 2), ("BRENT", "Brent oil $", "sensex", "sensex.html", 2),
+         ("INDIAVIX", "India VIX (fear)", "sensex", "sensex.html", 2)]
 
 
 def pulse(store, india):

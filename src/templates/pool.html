@@ -1,34 +1,100 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% set pl = p.pool %}{% set c = p.calls[1] %}
+{% block head %}
+<h1>Global pool: {{ c.action|lower }}</h1>
+<p class="lede">{{ c.bullets|select('bold')|first|md if c.bullets|select('bold')|first else c.bullets[0]|md }}</p>
+{% if alerts %}<div class="alerts">{% for a in alerts %}<span class="al {{ a.kind }} a-{{ a.area }}"><i></i>{{ a.text }}</span>{% endfor %}</div>{% endif %}
+{% endblock %}
 {% block body %}
-{% set pl = p.pool %}
-<section class="band"><div class="wrap grid2">
-<div>
-<h2>Today's allocation</h2>
-<p class="mute">Base weights come from risk parity (calmer markets get more). A market below its 100-day average (in rupees) is held at half weight; the freed money waits in a liquid fund.</p>
-{% for r in pl.rows %}<div class="prow"><span>{{ r.market }}{% if r.high_risk %} <span class="live" title="volatility above 1.4× its 3-year average">HIGH RISK</span>{% endif %}</span>
-<div class="pb"><i style="width:{{ r.now / maxw * 100 }}%"></i><s style="left:{{ r.base / maxw * 100 }}%"></s></div><b class="n" style="text-align:right">{{ r.now|round(1) }}%</b></div>{% endfor %}
-<div class="prow"><span>Liquid fund</span><div class="pb"><i style="width:{{ pl.liquid / maxw * 100 if pl.liquid < maxw else 100 }}%;background:var(--mute)"></i></div><b style="text-align:right">{{ pl.liquid }}%</b></div>
-<div class="legend"><span><i style="background:var(--blue)"></i>Weight now</span><span><i style="background:var(--ink);width:3px"></i>Full (base) weight</span></div>
-<p style="margin-top:12px"><b>Total invested {{ pl.invested }}% · liquid {{ pl.liquid }}%.</b></p>
-<p class="src">Weekly check as of the Friday {{ pl.checked|day }} close; base weights from 36 monthly INR returns to {{ pl.base_month|day }}. INR prices = index × (USD/INR ÷ USD/local currency), Yahoo Finance.</p>
-</div>
-<div>
-<h2>Each market vs its 100-day average</h2>
-<div class="tw"><table><tr><th>Market</th><th class="n">Base</th><th class="n">Now</th><th class="n">vs 100-day avg</th><th class="n">Volatility</th></tr>
-{% for r in pl.rows %}<tr><td>{{ r.market }}</td><td class="n">{{ r.base }}%</td><td class="n">{{ r.now }}%</td><td class="n {{ 'up' if r.vs_ma > 0 else 'dn' }}">{{ r.vs_ma|sgn1 }}%</td><td class="n">{{ r.ewma_vol }}%</td></tr>{% endfor %}</table></div>
+{% set cut = pl.rows|selectattr('below')|list %}
+<section class="band" style="padding-bottom:0"><div class="wrap">
+<div class="kv a-pool">
+  <div><div class="k">Invested</div><div class="v">{{ pl.invested }}%</div><div class="meter"><i style="width:{{ pl.invested }}%;background:var(--pl)"></i></div></div>
+  <div><div class="k">Parked in a liquid fund</div><div class="v">{{ pl.liquid }}%</div><div class="s mute">waits for markets to recover</div></div>
+  <div><div class="k">Markets at half weight</div><div class="v">{{ cut|length }} of {{ pl.rows|length }}</div><div class="s mute">below their 100-day average</div></div>
+  <div><div class="k">Last check</div><div class="v" style="font-size:17px">Fri {{ pl.checked|dd }} {{ pl.checked|mon }}</div><div class="s mute">next: this Friday's close</div></div>
 </div>
 </div></section>
-<section class="band panel"><div class="wrap">
-<h2>Why this rule (re-tested with the rule as applied live, in rupees)</h2>
-<p class="mute">{{ bt._period }}. Before tax; 0.1% cost per switch; liquid fund assumed at 6%/yr.</p>
-<div class="tw"><table><tr><th>Version</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Return/risk</th><th class="n">Worst fall</th><th class="n">Avg in cash</th><th class="n">2008</th><th class="n">2022</th></tr>
-{% for k, v in bt.items() if not k.startswith('_') %}<tr {% if 'weekly: Half' in k %}style="font-weight:700"{% endif %}><td>{{ k|replace('weekly:', 'Weekly check:')|replace('monthly:', 'Month-end check:') }}</td><td class="n">{{ v.cagr }}%</td><td class="n">{{ v.vol }}%</td><td class="n">{{ v.ratio }}</td><td class="n">{{ v.mdd }}%</td><td class="n">{{ v.avg_cash }}%</td><td class="n">{{ v.y2008 }}%</td><td class="n">{{ v.y2022 }}%</td></tr>{% endfor %}</table></div>
-<p class="callout">The weekly half-cut (the live rule) gives up a little return compared with doing nothing, but roughly halves the worst fall. Full-cut looks safer on paper but sits about a third in cash and switches more, which means more tax and more whipsaws.</p>
+
+<section class="band"><div class="wrap cols">
+<div class="card a-pool">
+  <div class="sec-h"><h2>What to hold now</h2><span class="small mute">Tap a market to chart it</span></div>
+  <div id="alloc">
+  {% for r in pl.rows|sort(attribute='now', reverse=True) %}{% set w = world.get(r.market) %}
+  <button type="button" class="arow{% if loop.first %} on{% endif %}" data-m="{{ r.market }}">
+    <span class="nm"><b>{{ r.market }}</b><span class="small {{ 'dn' if r.below else 'up' }}">{{ 'Half weight' if r.below else 'Full weight' }} · {{ r.vs_ma|sgn1 }}% vs avg{% if r.high_risk %} · <span class="live">high risk</span>{% endif %}</span></span>
+    <span class="pb"><i style="width:{{ r.now / maxw * 100 }}%;background:{{ 'var(--am)' if r.below else 'var(--pl)' }}"></i><s style="left:{{ r.base / maxw * 100 }}%"></s></span>
+    <span class="wt"><b>{{ r.now }}%</b>{% if w %}<span class="small {{ 'up' if w.chg1 > 0 else 'dn' }}">{{ w.chg1|sgn1 }}% today</span>{% endif %}</span>
+  </button>
+  {% endfor %}
+  </div>
+  <div class="legend"><span><i style="background:var(--pl)"></i>Full weight</span><span><i style="background:var(--am)"></i>Half weight</span><span><i style="background:var(--ink);width:3px"></i>Full (base) weight</span></div>
+</div>
+<div class="card a-pool">
+  <div class="sec-h"><h2 id="mname">{{ (pl.rows|sort(attribute='now', reverse=True)|first).market }}</h2>
+  <div class="seg" id="rng">{% for k, n in [('3M',66),('6M',130),('1Y',260),('2Y',520)] %}<button type="button" data-n="{{ n }}" {% if k == '1Y' %}class="on"{% endif %}>{{ k }}</button>{% endfor %}</div></div>
+  <div class="chart" id="pc"></div>
+  <div class="legend"><span><i style="background:var(--pl)"></i>Price in ₹</span><span><i style="background:var(--am)"></i>100-day average</span></div>
+  <p class="src">Below the orange line = half weight; back above it at a Friday close = full weight again. Prices in rupees, so currency moves count.</p>
+</div>
 </div></section>
-<section class="band"><div class="wrap">
-<h2>Decision log (changes only)</h2>
-<div class="tw"><table><tr><th>When</th><th>Area</th><th>Call</th><th>Was</th><th>Why</th></tr>
-{% for d in log %}<tr><td>{{ d.made_at_ist|when }}</td><td>{{ d.area_name }}</td><td><b>{{ d.action }}</b></td><td>{{ d.prev_action or '—' }}</td><td class="small">{{ d.reason }}</td></tr>{% endfor %}</table></div>
-<p class="src">Append-only. Every update is in History.</p>
+
+<section class="band panel"><div class="wrap cols">
+<div class="card">
+  <h2>India vs the world</h2>
+  <p>The Sensex trend scores <b>{{ p.divergence.sensex|int }}/10</b>; the 8 foreign markets average <b>{{ p.divergence.world }}/10</b>.</p>
+  <ul>
+    <li>When India ran this far ahead before, a 5%+ drop was <b>less</b> likely than normal, so there's no reason to sell.</li>
+    <li>But gains were muted for about 3 months: hold, don't chase, stagger new money.</li>
+  </ul>
+  <p class="src">{% if p.divergence.days_wider %}Only {{ p.divergence.days_wider }} days since 2002 had a wider gap.{% else %}No day since 2002 had a wider gap.{% endif %} Small samples: treat as a tilt.</p>
+</div>
+<div class="card">
+  <h2>Recent changes</h2>
+  {% if log %}<ul>{% for d in log[:5] %}<li><b>{{ d.action }}</b> <span class="small mute">{{ d.made_at_ist|when }}{% if d.prev_action %} · was {{ d.prev_action }}{% endif %}</span><br><span class="small">{{ d.reason }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="mute">No changes yet.</p>{% endif %}
+</div>
+</div>
+<div class="wrap">
+<details class="fold"><summary>Why the half-weight rule (tested in rupees)</summary><div class="in">
+<p class="mute small">{{ bt._period }}. Before tax; 0.1% cost per switch; liquid fund at 6%/yr.</p>
+<div class="tw"><table><tr><th>Version</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Worst fall</th><th class="n">Avg in cash</th><th class="n">2008</th><th class="n">2022</th></tr>
+{% for k, v in bt.items() if not k.startswith('_') %}<tr {% if 'weekly: Half' in k %}style="font-weight:700"{% endif %}><td>{{ k|replace('weekly:', 'Weekly check:')|replace('monthly:', 'Month-end check:') }}</td><td class="n">{{ v.cagr }}%</td><td class="n">{{ v.vol }}%</td><td class="n">{{ v.mdd }}%</td><td class="n">{{ v.avg_cash }}%</td><td class="n">{{ v.y2008 }}%</td><td class="n">{{ v.y2022 }}%</td></tr>{% endfor %}</table></div>
+<p class="callout">The weekly half-cut gives up a little return but roughly halves the worst fall.</p>
+</div></details>
+<details class="fold"><summary>All 10 markets: trend and heat</summary><div class="in">
+<div class="tw"><table>
+<tr><th>Market</th><th class="n">1 day</th><th class="n">5 days</th><th class="n">Trend</th><th class="n">RSI</th><th class="n">From 1-yr high</th></tr>
+{% for r in p.world %}<tr><td>{{ r.market }}{% if r.live %} <span class="live">live</span>{% endif %}</td><td class="n {{ 'up' if r.chg1>0 else 'dn' }}">{{ r.chg1|sgn2 }}%</td><td class="n {{ 'up' if r.chg5>0 else 'dn' }}">{{ r.chg5|sgn2 }}%</td>
+<td class="n"><b>{{ r.score }}</b>/10</td><td class="n">{{ r.rsi }}</td><td class="n">{{ r.from_high }}%</td></tr>{% endfor %}
+</table></div>
+<p class="src">Trend = how many of 10 standard trend checks are positive. Live = market still trading. Base weights: risk parity from 36 monthly ₹ returns to {{ pl.base_month|day }}.</p>
+</div></details>
+<details class="fold"><summary>India vs the world: full history</summary><div class="in">
+<div class="tw"><table>
+<tr><th>Situation</th><th class="n">Days</th><th class="n">Next 20 days</th><th class="n">Next 60 days</th><th class="n">Odds of 5%+ fall</th></tr>
+{% for t in p.divergence.table %}<tr {% if t.setup == p.divergence.bucket %}style="font-weight:600"{% endif %}><td>{{ t.setup }}{% if t.setup == p.divergence.bucket %} ← now{% endif %}</td><td class="n">{{ t.days }}</td><td class="n">{{ t.f20|sgn2 }}%</td><td class="n">{{ t.f60|sgn2 }}%</td><td class="n">{{ t.p_fall5 }}%</td></tr>{% endfor %}
+</table></div>
+</div></details>
 </div></section>
+{% endblock %}
+{% block scripts %}
+<style>
+.arow{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:9px 8px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+.arow:hover{background:var(--panel)}.arow.on{background:var(--plbg);border-color:var(--pl)}
+.arow .nm{display:flex;flex-direction:column}.arow .wt{text-align:right;display:flex;flex-direction:column;white-space:nowrap}
+@media(max-width:640px){.arow{grid-template-columns:minmax(0,1fr) auto}.arow .pb{grid-column:1/-1;order:3}}
+</style>
+<script>
+(function(){
+var C={{ chart|tojson }},first=document.querySelector(".arow.on").dataset.m;
+function cfg(m){var x=C.markets[m];return{dates:C.dates,n:260,label:m+" in rupees vs 100-day average",series:[
+ {name:m,v:x.inr,color:"var(--pl)",w:2.2,fill:1},{name:"100-day avg",v:x.ma,color:"var(--am)",w:1.6,dash:"5 4"}]}}
+var ch=IC.make(document.getElementById("pc"),cfg(first),document.getElementById("rng"));
+document.getElementById("alloc").addEventListener("click",function(e){var b=e.target.closest(".arow");if(!b)return;
+ document.querySelectorAll(".arow").forEach(function(x){x.classList.toggle("on",x===b)});
+ document.getElementById("mname").textContent=b.dataset.m;var n=+document.querySelector("#rng .on").dataset.n;var c=cfg(b.dataset.m);c.n=n;ch.set(c);
+ if(window.innerWidth<900)document.getElementById("pc").scrollIntoView({behavior:"smooth",block:"center"})});
+})();
+</script>
 {% endblock %}
