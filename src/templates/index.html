@@ -83,11 +83,11 @@
 </div>
 
 <div class="card">
-  <div class="sec-h"><h2>Top news</h2><span class="small mute">{{ ((p.news or {})['items'] or [])|length }} key stories · last 36 h</span></div>
-  {% if p.news and p.news['items'] %}
+  <div class="sec-h"><h2>Top news</h2><span class="small mute">{{ ((p.news or {}).get('items') or [])|length }} key stories · last 36 h</span></div>
+  {% if p.news and p.news.get('items') %}
   <div class="filt" id="nf"><button type="button" class="on" data-a="all">All</button>{% for k, v in AREA.items() %}<button type="button" data-a="{{ v }}">{{ v }}</button>{% endfor %}</div>
   <ol class="news">
-  {% for n in p.news['items'] %}
+  {% for n in p.news.get('items') %}
   <li data-areas="{{ n.effects|map(attribute='area')|join('|') }}">
     <div>
       <a class="h" href="{{ n.link }}" target="_blank" rel="noopener">{{ n.title }}</a>

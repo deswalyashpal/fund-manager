@@ -102,3 +102,16 @@ def test_provisional_bars_not_used_as_closes(store):
     allbars = store.daily("GOLD")
     assert allbars["provisional"].iloc[-1] in (0, 1)
     assert len(store.daily("GOLD", final_only=True)) == len(allbars) - int(allbars["provisional"].sum())
+
+
+def test_full_site_renders_from_scratch(tmp_path, frozen_db):
+    """A fresh build (as in the cloud) renders every page, including History pages of older snapshots."""
+    from src import render
+    p = tmp_path / "m.db"
+    shutil.copy(frozen_db, p)
+    con = db.connect(p)
+    payload = build.run("evening", pd.Timestamp("2026-11-23 23:30").tz_localize(IST), "test evening 23:30", con)
+    out = tmp_path / "site"
+    render.render_all(con, payload, out)
+    assert (out / "index.html").exists() and (out / "metals.html").exists()
+    assert len(list((out / "snap").glob("*.html"))) >= 1
