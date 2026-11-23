@@ -1,0 +1,92 @@
+# Runs the fund-manager jobs on GitHub's servers and publishes the site to GitHub Pages.
+# Times are UTC (IST - 5:30). GitHub may start scheduled runs a few minutes late; each run
+# files itself under the latest scheduled slot, so a late start is harmless.
+name: Fund manager jobs
+
+on:
+  schedule:
+    - cron: "15 3 * * 1-5"    # preopen 08:45 IST
+    - cron: "40 3 * * 1-5"    # preopen 09:10 IST
+    - cron: "50 4-9 * * 1-5"  # hourly 10:20-15:20 IST
+    - cron: "10 9 * * 1-5"    # decision 14:40 IST (3 pm cut-off)
+    - cron: "45 10 * * 1-5"   # close 16:15 IST
+    - cron: "0 18 * * 1-5"    # evening 23:30 IST
+    - cron: "30 21 * * 1-5"   # us_close 03:00 IST (Tue-Sat)
+    - cron: "30 4 * * 6"      # weekly Sat 10:00 IST
+    - cron: "30 5 * * 6"      # monthly 1st Sat 11:00 IST (the job skips other Saturdays)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run"
+        required: true
+        default: preopen
+        type: choice
+        options: [preopen, hourly, decision, close, evening, us_close, weekly, monthly]
+
+permissions:
+  contents: write   # update the database stored as a release asset
+  pages: write
+  id-token: write
+
+concurrency:
+  group: fund-manager-jobs   # one run at a time so the database is never written twice at once
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONWARNINGS: ignore
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Which job
+        id: pick
+        run: python .github/pick_job.py "${{ github.event.schedule }}" "${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore database (latest saved state, else the bootstrap copy)
+        run: |
+          mkdir -p data
+          if gh release download state -p market.db.gz -D data --clobber; then
+            gunzip -f data/market.db.gz
+          else
+            gunzip -c bootstrap/market.db.gz > data/market.db
+          fi
+          gh release download state -p validation.json -D data --clobber || cp bootstrap/validation.json data/validation.json
+
+      - name: Run job
+        run: python jobs/run.py "${{ steps.pick.outputs.job }}"
+
+      - name: Save database
+        run: |
+          gzip -kf data/market.db
+          gh release view state >/dev/null 2>&1 || gh release create state --title "Database state" --notes "Saved automatically after every job. Do not delete." --latest=false
+          gh release upload state data/market.db.gz data/validation.json --clobber
+
+      - name: Keep the schedule alive (GitHub pauses schedules after 60 days without commits)
+        if: steps.pick.outputs.job == 'weekly'
+        run: |
+          date -u +"%Y-%m-%dT%H:%MZ" > bootstrap/last_weekly_run.txt
+          git config user.name "fund-manager-bot"
+          git config user.email "fund-manager-bot@users.noreply.github.com"
+          git add bootstrap/last_weekly_run.txt
+          git commit -m "Weekly heartbeat" && git push || true
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+{% set g = p.metals.gold %}{% set s = p.metals.silver %}{% set r = p.metals.ratio %}
+<section class="band"><div class="wrap">
+<h2>Gold and silver</h2>
+<div class="tw"><table>
+<tr><th></th><th class="n">Gold</th><th class="n">Silver</th></tr>
+<tr><td>Price (COMEX futures){% if g.live %} <span class="live">LIVE — session still open</span>{% endif %}</td><td class="n"><b>${{ g.close|n1 }}</b></td><td class="n"><b>${{ s.close|n2 }}</b></td></tr>
+<tr><td>Since last settled price</td><td class="n">{{ g.chg_since_last_final|sgn2 }}%</td><td class="n">{{ s.chg_since_last_final|sgn2 }}%</td></tr>
+<tr><td>Last 5 sessions</td><td class="n">{{ g.chg5|sgn2 }}%</td><td class="n">{{ s.chg5|sgn2 }}%</td></tr>
+<tr><td>From 1-yr high</td><td class="n">{{ g.from_high }}%</td><td class="n">{{ s.from_high }}%</td></tr>
+<tr><td>Trend score</td><td class="n">{{ g.score }} / 10</td><td class="n">{{ s.score }} / 10</td></tr>
+<tr><td>RSI</td><td class="n">{{ g.rsi }} ({{ g.rsi_label|lower }})</td><td class="n">{{ s.rsi }} ({{ s.rsi_label|lower }})</td></tr>
+<tr><td>Buy-signal line (Supertrend)</td><td class="n">${{ g.st_line|n0 }}</td><td class="n">${{ s.st_line|n2 }}</td></tr>
+<tr><td>50 / 200-day average</td><td class="n">${{ g.sma50|n0 }} / ${{ g.sma200|n0 }}</td><td class="n">${{ s.sma50|n2 }} / ${{ s.sma200|n2 }}</td></tr>
+</table></div>
+<p class="src">COMEX futures (Yahoo GC=F, SI=F), bar dated {{ g.date|day }}. Futures can differ slightly from spot prices quoted in the news; all signals here use futures.</p>
+</div></section>
+<section class="band panel"><div class="wrap">
+<h2>Gold/silver ratio: {{ r.now }}</h2>
+{{ ratio_svg|safe }}
+<p>One ounce of gold buys {{ r.now }} ounces of silver. That is higher than on {{ r.pct_below }}% of days since {{ r.since }} (average {{ r.mean }}), and up from {{ r.low_1y }} on {{ r.low_1y_date|day }}.</p>
+<p>After past readings above 85, silver gained {{ r.analog_silver|sgn1 }}% on average over the next 6 months vs gold's {{ r.analog_gold|sgn1 }}%, and the ratio was lower {{ r.analog_ratio_lower }}% of the time ({{ r.analog_days }} days; all days: silver {{ r.all_silver|sgn1 }}%, gold {{ r.all_gold|sgn1 }}%). Much of that history comes from the 2020 rebound, so treat it as a tilt.</p>
+<p class="src">Daily COMEX futures 2001–now. 6 months = 120 trading days.</p>
+</div></section>
+<section class="band"><div class="wrap">
+<h2>Scenarios for the next 12–24 months</h2>
+<div class="tw"><table><tr><th>Scenario</th><th class="n">Odds</th><th class="n">Gold</th><th class="n">Silver</th><th class="n">Ratio</th></tr>
+{% for x in p.metals.scenarios %}<tr><td>{{ x.name }}</td><td class="n">{{ x.odds }}</td><td class="n">{{ x.gold }}</td><td class="n">{{ x.silver }}</td><td class="n">{{ x.ratio }}</td></tr>{% endfor %}</table></div>
+<p class="src">Research view made 22 Nov 2026 (50-year review); not recomputed automatically.</p>
+</div></section>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% block body %}
+<section class="band"><div class="wrap">
+<h2>What the forecast labels mean</h2>
+<div class="tw"><table>
+<tr><td>{{ m.chip('green', 'Direction + range') }}</td><td>Up/down was right about 6 times in 10 in testing (a coin toss gets 5), and the price stayed inside the range about 8 times in 10. It describes today compared with the last close; it is <b>not a buy/sell signal</b>, because a fund order gets today's closing price.</td></tr>
+<tr><td>{{ m.chip('amber', 'Range only, not direction') }}</td><td>Up or down is a coin toss. The range is the useful part: the price stayed inside it about 8 times in 10.</td></tr>
+<tr><td>{{ m.chip('red', "Don't rely on it") }}</td><td>Tested and no better than guessing. Shown for information only.</td></tr>
+</table></div>
+<p class="src">Labels are set automatically from the monthly validation run. A forecast drops to amber or red if its record slips.</p>
+</div></section>
+<section class="band panel"><div class="wrap">
+<h2>Plain-word guide</h2>
+<dl class="gl">
+<dt>Trend score</dt><dd>Out of 10 simple checks (price above its averages, momentum up, and so on), how many say "up".</dd>
+<dt>100-day average</dt><dd>The average closing price of the last 100 trading days (about 5 months). Above it = healthy trend.</dd>
+<dt>RSI</dt><dd>A 0–100 gauge of how fast prices moved recently. Above 70 = ran up fast (often pauses); below 30 = fell fast.</dd>
+<dt>Supertrend line / exit line</dt><dd>A trailing stop line. A close below it in an uptrend is the exit signal; a close above it in a downtrend is the buy signal.</dd>
+<dt>Range (80%)</dt><dd>The band the price should stay inside 8 times out of 10.</dd>
+<dt>Stagger</dt><dd>Investing new money in 4 equal parts, one each week, instead of all at once.</dd>
+<dt>Risk parity</dt><dd>Giving calmer markets more money and jumpy markets less, so each adds similar risk.</dd>
+<dt>Liquid fund</dt><dd>A very low-risk debt fund used as a parking place for cash.</dd>
+<dt>Gold/silver ratio</dt><dd>How many ounces of silver one ounce of gold buys. High = silver is cheap relative to gold.</dd>
+<dt>Live</dt><dd>A price from a market that is still trading. It is not a closing price yet.</dd>
+<dt>Model out of step</dt><dd>Shown when the day's-close forecast got the direction wrong on more than 6 of the last 10 days (below 40% over 20 days). Forecasts are then down-weighted.</dd>
+<dt>COMEX futures</dt><dd>Gold and silver contracts traded in New York. Used for all metal signals here; spot prices in the news can differ slightly.</dd>
+<dt>3 pm cut-off</dt><dd>Index-fund orders placed before 3:00 pm IST get that day's closing price (NAV). The Sensex closes at 3:30 pm.</dd>
+</dl>
+</div></section>
+<section class="band"><div class="wrap">
+<h2>The rules this site follows</h2>
+<ol>
+<li><b>Sensex fund:</b> hold by default. Sell only on a daily close below the exit line. When stretched (RSI above 70), new money goes in 4 weekly parts. No lump sums in the 2 days around RBI/Fed/CPI dates.</li>
+<li><b>2:15 pm check:</b> if the Sensex is more than 0.5% below yesterday's close and an instalment is due, place it before 3 pm. Never sell on this signal.</li>
+<li><b>Dip ladder:</b> extra new money at 10% below the 1-yr high, more at 20%, the most if India VIX passes 25.</li>
+<li><b>Holding rule:</b> money needed within 1 year stays in a liquid fund; money for 3+ years goes in the index fund.</li>
+<li><b>Global pool:</b> risk-parity weights reset monthly; any market below its 100-day average (checked at the Friday close) is held at half weight.</li>
+<li><b>Gold and silver:</b> no buying while the trend score is 3 or less. Buy signal = close above the Supertrend line with a trend score of 4+. Favour silver while the ratio is above 85.</li>
+</ol>
+</div></section>
+{% endblock %}

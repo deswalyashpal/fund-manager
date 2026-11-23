@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% import "macros.html" as m %}
+{% block head %}
+<h1>{{ headline }}</h1>
+<p class="lede">{{ lede }}</p>
+{{ m.calls(p.calls) }}
+{% endblock %}
+{% block body %}
+<section class="band"><div class="wrap">
+<h2>Sensex: where it may be at each time</h2>
+<p class="mute">Dot = most likely level. Bar = the range it should stay within 8 times out of 10. Pink line = last official close, <b>{{ p.sensex.close|n2 }}</b> ({{ p.sensex.date|day }}). The label under each forecast says what you can rely on.</p>
+{% if p.forecasts %}{{ m.fcrows(p.forecasts, scale, p.sensex.close, 'Last close') }}
+{% else %}<p>No forecasts yet for today. They are made at 08:45 and 09:10 IST on trading days.</p>{% endif %}
+<p class="src">Forecasts: walk-forward models on Yahoo Finance data (^BSESN, ES=F, ^HSI, ^KS11). Made {{ fc_made|when }} IST. See <a href="forecasts.html">Forecasts</a> and <a href="accuracy.html">Actual vs predicted</a>.</p>
+</div></section>
+
+<section class="band panel"><div class="wrap grid2">
+<div>
+<h2>Coming up</h2>
+{% if p.events %}<table>{% for e in p.events %}<tr><td>{{ e.date|day }}</td><td>{{ e.name }}{% if not e.confirmed %} <span class="mute">(date to confirm)</span>{% endif %}</td><td class="n">in {{ e.days }} days</td></tr>{% endfor %}</table>
+<p class="small mute">No lump sums in the 2 days around these dates.</p>{% else %}<p>No events in the next 45 days in the calendar.</p>{% endif %}
+<h3 style="margin-top:18px">Today's checklist</h3>
+<ul>
+<li><b>Daily:</b> check the Sensex exit line ({{ p.calls[0].exit_line|n0 }}) and today's forecasts.</li>
+<li><b>2:15 pm:</b> {{ sig.check_215.status }}.</li>
+<li><b>Weekly (Fri close):</b> markets vs their 100-day average; restore half weight to any market back above it.</li>
+<li><b>Monthly:</b> base weights reset, models retrained.</li>
+</ul>
+</div>
+<div>
+<h2>At a glance</h2>
+<div class="kpis">
+<div class="kpi"><div class="k">Sensex trend score</div><div class="v">{{ p.sensex.score }}/10</div><div class="small mute">RSI {{ p.sensex.rsi|round(1) }}</div></div>
+<div class="kpi"><div class="k">World trend score (8 foreign)</div><div class="v">{{ p.divergence.world }}/10</div><div class="small mute">gap {{ p.divergence.gap }}</div></div>
+<div class="kpi"><div class="k">Pool invested</div><div class="v">{{ p.pool.invested }}%</div><div class="small mute">liquid {{ p.pool.liquid }}%</div></div>
+<div class="kpi"><div class="k">Gold / silver ratio</div><div class="v">{{ p.metals.ratio.now }}</div><div class="small mute">avg {{ p.metals.ratio.mean }}</div></div>
+</div>
+<p class="src">Sensex: official close {{ p.sensex.date|day }}. World board: latest bar per market{% if p.data_through.live_asia %}; {{ p.data_through.live_asia|join(', ') }} still trading (live, not a close){% endif %}. Metals: COMEX futures.</p>
+</div>
+</div></section>
+{% endblock %}

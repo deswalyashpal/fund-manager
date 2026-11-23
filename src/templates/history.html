@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="band"><div class="wrap">
+<h2>Every update, last {{ days }} days</h2>
+<p class="mute">Click a row to see that update exactly as it was. All older updates stay in the database.</p>
+<div class="filters">
+<label>Date <select id="fd"><option value="">All</option>{% for d in dates %}<option>{{ d }}</option>{% endfor %}</select></label>
+<label>Job <select id="fj"><option value="">All</option>{% for j in jobs %}<option>{{ j }}</option>{% endfor %}</select></label>
+<label>Area <select id="fa"><option value="">All</option><option value="0">Sensex fund</option><option value="1">Pool</option><option value="2">Metals</option></select></label>
+<label>Only changes <input type="checkbox" id="fc"></label>
+<label>Search <input id="fq" placeholder="e.g. 14:40 or HOLD"></label>
+</div>
+<div class="tw"><table id="ht">
+<tr><th>When (IST)</th><th>Job</th><th>Sensex fund</th><th>Pool</th><th>Metals</th><th class="n">Close forecast</th><th class="n">Range</th></tr>
+{% for s in snaps %}<tr data-d="{{ s.date }}" data-j="{{ s.job }}" data-c="{{ s.changed|join(',') }}" data-t="{{ s.text }}">
+<td><a href="snap/{{ s.id }}.html">{{ s.when }}</a></td><td>{{ s.job }}</td>
+{% for c in s.calls %}<td><span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[c.light] }}">{{ c.action }}</span>{% if c.changed %} <b title="changed">●</b>{% endif %}</td>{% endfor %}
+<td class="n">{{ s.close_fc|n0 if s.close_fc else '—' }}</td><td class="n">{{ s.close_rng }}</td></tr>{% endfor %}
+</table></div>
+<p class="src">● = call changed in that update.</p>
+</div></section>
+<script>
+(function(){var q=function(i){return document.getElementById(i)};
+function f(){var d=q('fd').value,j=q('fj').value,a=q('fa').value,c=q('fc').checked,s=q('fq').value.toLowerCase();
+document.querySelectorAll('#ht tr[data-d]').forEach(function(r){var ch=r.dataset.c?r.dataset.c.split(','):[];
+var ok=(!d||r.dataset.d===d)&&(!j||r.dataset.j===j)&&(!c||(a?ch.indexOf(a)>=0:ch.length>0))&&(!s||r.dataset.t.toLowerCase().indexOf(s)>=0);
+r.style.display=ok?'':'none'})}
+['fd','fj','fa','fc','fq'].forEach(function(i){q(i).addEventListener('input',f);q(i).addEventListener('change',f)})})();
+</script>
+{% endblock %}

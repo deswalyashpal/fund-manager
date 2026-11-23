@@ -1,0 +1,93 @@
+# Global Index Fund Manager: every setting and threshold in one place.
+# Times are IST unless stated otherwise. Edit and save; the next job run picks it up.
+
+timezone: Asia/Kolkata
+
+# The 10 markets. close_tz/close_time = when a daily bar becomes final (local exchange time).
+markets:
+  - {key: IXIC,  name: Nasdaq,        yahoo: "^IXIC",     ccy: USD, close_tz: America/New_York, close_time: "16:00", pool: true}
+  - {key: NYA,   name: NYSE,          yahoo: "^NYA",      ccy: USD, close_tz: America/New_York, close_time: "16:00", pool: true}
+  - {key: SSE,   name: Shanghai,      yahoo: "000001.SS", ccy: CNY, close_tz: Asia/Shanghai,    close_time: "15:00", pool: true}
+  - {key: N225,  name: Nikkei 225,    yahoo: "^N225",     ccy: JPY, close_tz: Asia/Tokyo,       close_time: "15:30", pool: true}
+  - {key: N100,  name: Euronext 100,  yahoo: "^N100",     ccy: EUR, close_tz: Europe/Paris,     close_time: "17:35", pool: true}
+  - {key: SZSE,  name: Shenzhen,      yahoo: "399001.SZ", ccy: CNY, close_tz: Asia/Shanghai,    close_time: "15:00", pool: true}
+  - {key: HSI,   name: Hang Seng,     yahoo: "^HSI",      ccy: HKD, close_tz: Asia/Hong_Kong,   close_time: "16:10", pool: true}
+  - {key: BSESN, name: Sensex,        yahoo: "^BSESN",    ccy: INR, close_tz: Asia/Kolkata,     close_time: "15:30", pool: true}
+  - {key: NSEI,  name: Nifty 50,      yahoo: "^NSEI",     ccy: INR, close_tz: Asia/Kolkata,     close_time: "15:30", pool: false}
+  - {key: KS11,  name: KOSPI,         yahoo: "^KS11",     ccy: KRW, close_tz: Asia/Seoul,       close_time: "15:30", pool: true}
+
+# Macro, FX, futures, metals. Futures/FX daily bars are treated as final after 17:00 New York.
+series:
+  - {key: VIX,      yahoo: "^VIX",      close_tz: America/New_York, close_time: "16:15"}
+  - {key: INDIAVIX, yahoo: "^INDIAVIX", close_tz: Asia/Kolkata,     close_time: "15:30"}
+  - {key: US10Y,    yahoo: "^TNX",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: US13W,    yahoo: "^IRX",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: WTI,      yahoo: "CL=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: BRENT,    yahoo: "BZ=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: GOLD,     yahoo: "GC=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: SILVER,   yahoo: "SI=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: COPPER,   yahoo: "HG=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: DXY,      yahoo: "DX-Y.NYB",  close_tz: America/New_York, close_time: "17:00"}
+  - {key: ES,       yahoo: "ES=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: NQ,       yahoo: "NQ=F",      close_tz: America/New_York, close_time: "17:00"}
+  - {key: USDINR,   yahoo: "INR=X",     close_tz: Europe/London,    close_time: "23:00"}
+  - {key: USDJPY,   yahoo: "JPY=X",     close_tz: Europe/London,    close_time: "23:00"}
+  - {key: USDCNY,   yahoo: "CNY=X",     close_tz: Europe/London,    close_time: "23:00"}
+  - {key: USDEUR,   yahoo: "EUR=X",     close_tz: Europe/London,    close_time: "23:00"}
+  - {key: USDHKD,   yahoo: "HKD=X",     close_tz: Europe/London,    close_time: "23:00"}
+  - {key: USDKRW,   yahoo: "KRW=X",     close_tz: Europe/London,    close_time: "23:00"}
+
+# Hourly bars we archive ourselves (Yahoo keeps only ~730 days of hourly history).
+hourly: [BSESN, NSEI, INDIAVIX, ES, NQ, HSI, KS11, N225, SSE, SZSE, GOLD, SILVER, USDINR]
+
+# Playbook thresholds (HANDOVER section 4 + decisions agreed 23 Nov 2026)
+rules:
+  rsi_stretched: 70
+  invest_normally_min_score: 6
+  stagger_parts: 4                 # 4 equal parts, one each week
+  event_caution_days: 2            # avoid lump sums within 2 days of RBI/Fed/CPI
+  regime_warning_hit_rate: 0.40    # 20-day close-forecast hit rate below this -> warning
+  check_215_threshold: 0.005       # 2:15 pm check: Sensex more than 0.5% below previous close
+  dip_ladder: [0.10, 0.20, 0.30]   # below 1-yr high
+  vix_fear: 25
+  pool_cap: 0.30
+  pool_lookback_months: 36
+  pool_cut_factor: 0.5             # half weight below the 100-day average
+  pool_sma_days: 100               # true daily 100-day SMA in INR (agreed)
+  high_risk_vol_multiple: 1.4
+  metals_min_score: 4              # no buy while trend score <= 3
+  ratio_tilt: 85
+  cost_per_switch: 0.001
+  cash_yield: 0.06                 # assumption; replace with a real liquid-fund series later
+
+forecast:
+  ewma_alpha: 0.06
+  ridge_alpha: 0.0001
+  preopen_q: [0.07, 0.93]
+  insession_q: [0.10, 0.90]
+  gap_widen: 1.25
+  coverage_ok: [0.70, 0.90]
+
+# Upcoming events (lump-sum caution window). Confirm dates on the official calendars.
+events:
+  - {date: "2026-12-04", name: "RBI policy decision (MPC 2-4 Dec)", confirmed: true}
+  - {date: "2026-12-09", name: "US Fed decision (8-9 Dec)", confirmed: true}
+  - {date: "2026-12-14", name: "India CPI release (around 12-14 Dec, confirm on MOSPI)", confirmed: false}
+
+# NSE/BSE trading holidays (weekdays with no session). NOT yet verified: NSE/BSE block
+# automated requests, so please paste the official list from nseindia.com here.
+# Jobs also detect a no-session day automatically (no Sensex bar by 09:45 IST).
+holidays: []
+
+# Job schedule (IST, Mon-Fri). weekly/monthly run Saturday.
+schedule:
+  preopen:  ["08:45", "09:10"]
+  hourly:   ["10:20", "11:20", "12:20", "13:20", "14:20", "15:20"]
+  decision: ["14:40"]
+  close:    ["16:15"]
+  evening:  ["23:30"]
+  us_close: ["03:00"]
+  weekly:   ["Sat 10:00"]
+  monthly:  ["Sat1 11:00"]
+
+history_days_shown: 7

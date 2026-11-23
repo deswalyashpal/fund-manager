@@ -1,0 +1,39 @@
+{% macro chip(level, name) -%}
+<span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[level] }}">{{ name }}</span>
+{%- endmacro %}
+
+{% macro fcrows(fcs, scale, base, base_label) -%}
+{% set lo = scale[0] %}{% set hi = scale[1] %}
+{% for f in fcs %}
+{% set l = (f.low - lo) / (hi - lo) * 100 %}{% set w = (f.high - f.low) / (hi - lo) * 100 %}{% set pt = (f.point - lo) / (hi - lo) * 100 %}
+<div class="frow">
+  <div class="lab"><b>{{ f.label }}</b><span>for {{ f.target|when }}</span></div>
+  <div class="track" aria-label="{{ f.label }} range {{ f.low|n0 }} to {{ f.high|n0 }}, most likely {{ f.point|n0 }}">
+    <div class="base" style="left:{{ (base - lo) / (hi - lo) * 100 }}%" title="{{ base_label }}"></div>
+    <div class="rng" style="left:{{ l }}%;width:{{ w }}%"></div>
+    <div class="pt" style="left:{{ pt }}%"></div>
+    {% if f.actual %}<div class="act" style="left:{{ (f.actual - lo) / (hi - lo) * 100 }}%" title="Actual {{ f.actual|n0 }}"></div>{% endif %}
+    <span class="lo" style="left:{{ l }}%">{{ f.low|n0 }}</span>
+    <span class="hi" style="left:{{ l + w }}%;transform:translateX(-100%)">{{ f.high|n0 }}</span>
+  </div>
+  <div class="val"><b>{{ f.point|n0 }}</b>
+    <span class="{{ 'up' if f.chg > 0 else 'dn' }}">{{ f.chg|sgn2 }}%</span>{% if f.p_up is not none %} <span class="mute">· {{ (f.p_up*100)|round|int }}% chance up</span>{% endif %}<br>
+    {% if f.actual %}<div class="tline"><b>Actual {{ f.actual|n0 }}</b></div>{% endif %}
+  </div>
+  <div class="trust">{{ chip(f.trust, f.trust_name) }} <span class="tline">{{ f.trust_text }}</span></div>
+</div>
+{% endfor %}
+{%- endmacro %}
+
+{% macro calls(cs) -%}
+<div class="calls">
+{% for c in cs %}
+<div class="call {{ {'green':'g','amber':'a','red':'r'}[c.light] }}">
+  <div class="who">{{ c.title }}</div>
+  <div class="what">{{ c.action }}</div>
+  <ul>{% for b in c.bullets %}<li>{{ b|md }}</li>{% endfor %}</ul>
+  <div class="chg">{% if c.prev_action is none %}First call recorded.{% elif c.changed %}<b>Changed</b> from {{ c.prev_action }} ({{ c.prev_at|when }}). Why: {{ c.reason }}{% else %}Unchanged since {{ c.prev_at|when }}. {{ c.reason }}{% endif %}</div>
+</div>
+{% endfor %}
+</div>
+{%- endmacro %}

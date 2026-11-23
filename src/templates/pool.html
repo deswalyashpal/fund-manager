@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block body %}
+{% set pl = p.pool %}
+<section class="band"><div class="wrap grid2">
+<div>
+<h2>Today's allocation</h2>
+<p class="mute">Base weights come from risk parity (calmer markets get more). A market below its 100-day average (in rupees) is held at half weight; the freed money waits in a liquid fund.</p>
+{% for r in pl.rows %}<div class="prow"><span>{{ r.market }}{% if r.high_risk %} <span class="live" title="volatility above 1.4× its 3-year average">HIGH RISK</span>{% endif %}</span>
+<div class="pb"><i style="width:{{ r.now / maxw * 100 }}%"></i><s style="left:{{ r.base / maxw * 100 }}%"></s></div><b class="n" style="text-align:right">{{ r.now|round(1) }}%</b></div>{% endfor %}
+<div class="prow"><span>Liquid fund</span><div class="pb"><i style="width:{{ pl.liquid / maxw * 100 if pl.liquid < maxw else 100 }}%;background:var(--mute)"></i></div><b style="text-align:right">{{ pl.liquid }}%</b></div>
+<div class="legend"><span><i style="background:var(--blue)"></i>Weight now</span><span><i style="background:var(--ink);width:3px"></i>Full (base) weight</span></div>
+<p style="margin-top:12px"><b>Total invested {{ pl.invested }}% · liquid {{ pl.liquid }}%.</b></p>
+<p class="src">Weekly check as of the Friday {{ pl.checked|day }} close; base weights from 36 monthly INR returns to {{ pl.base_month|day }}. INR prices = index × (USD/INR ÷ USD/local currency), Yahoo Finance.</p>
+</div>
+<div>
+<h2>Each market vs its 100-day average</h2>
+<div class="tw"><table><tr><th>Market</th><th class="n">Base</th><th class="n">Now</th><th class="n">vs 100-day avg</th><th class="n">Volatility</th></tr>
+{% for r in pl.rows %}<tr><td>{{ r.market }}</td><td class="n">{{ r.base }}%</td><td class="n">{{ r.now }}%</td><td class="n {{ 'up' if r.vs_ma > 0 else 'dn' }}">{{ r.vs_ma|sgn1 }}%</td><td class="n">{{ r.ewma_vol }}%</td></tr>{% endfor %}</table></div>
+</div>
+</div></section>
+<section class="band panel"><div class="wrap">
+<h2>Why this rule (re-tested with the rule as applied live, in rupees)</h2>
+<p class="mute">{{ bt._period }}. Before tax; 0.1% cost per switch; liquid fund assumed at 6%/yr.</p>
+<div class="tw"><table><tr><th>Version</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Return/risk</th><th class="n">Worst fall</th><th class="n">Avg in cash</th><th class="n">2008</th><th class="n">2022</th></tr>
+{% for k, v in bt.items() if not k.startswith('_') %}<tr {% if 'weekly: Half' in k %}style="font-weight:700"{% endif %}><td>{{ k|replace('weekly:', 'Weekly check:')|replace('monthly:', 'Month-end check:') }}</td><td class="n">{{ v.cagr }}%</td><td class="n">{{ v.vol }}%</td><td class="n">{{ v.ratio }}</td><td class="n">{{ v.mdd }}%</td><td class="n">{{ v.avg_cash }}%</td><td class="n">{{ v.y2008 }}%</td><td class="n">{{ v.y2022 }}%</td></tr>{% endfor %}</table></div>
+<p class="callout">The weekly half-cut (the live rule) gives up a little return compared with doing nothing, but roughly halves the worst fall. Full-cut looks safer on paper but sits about a third in cash and switches more, which means more tax and more whipsaws.</p>
+</div></section>
+<section class="band"><div class="wrap">
+<h2>Decision log (changes only)</h2>
+<div class="tw"><table><tr><th>When</th><th>Area</th><th>Call</th><th>Was</th><th>Why</th></tr>
+{% for d in log %}<tr><td>{{ d.made_at_ist|when }}</td><td>{{ d.area_name }}</td><td><b>{{ d.action }}</b></td><td>{{ d.prev_action or '—' }}</td><td class="small">{{ d.reason }}</td></tr>{% endfor %}</table></div>
+<p class="src">Append-only. Every update is in History.</p>
+</div></section>
+{% endblock %}

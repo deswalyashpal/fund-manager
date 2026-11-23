@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} · Fund Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700;800&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--panel:#f4f6fa;--ink:#0f1730;--mute:#5a6378;--line:#dfe3ec;--band:#0b1f4b;--mag:#e0115f;--blue:#1b6fd8;--rngc:#cfe0fa;
+--gr:#0f8a6a;--am:#b07400;--rd:#c8102e;--grbg:#dff5ec;--ambg:#fff1d6;--rdbg:#fde3e7;--card:#ffffff}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#070f26;--panel:#0e1a38;--ink:#e8ecf5;--mute:#9aa6c0;--line:#22305a;--mag:#ff4f8b;--blue:#5aa2ff;--rngc:#1f3d70;
+--gr:#3cd3a0;--am:#f0b44a;--rd:#ff6b7d;--grbg:#123a30;--ambg:#3a2a0c;--rdbg:#3a1220;--card:#0e1a38}}
+:root[data-theme=dark]{--bg:#070f26;--panel:#0e1a38;--ink:#e8ecf5;--mute:#9aa6c0;--line:#22305a;--mag:#ff4f8b;--blue:#5aa2ff;--rngc:#1f3d70;
+--gr:#3cd3a0;--am:#f0b44a;--rd:#ff6b7d;--grbg:#123a30;--ambg:#3a2a0c;--rdbg:#3a1220;--card:#0e1a38}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,-apple-system,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,4vw,44px) 16px}.wrap{max-width:1180px;margin:0 auto}
+.top{background:var(--band);color:#fff;padding-bottom:18px}
+h1,h2,h3{font-family:"Red Hat Display",system-ui,sans-serif;line-height:1.12;text-wrap:balance;margin:0}
+h1{font-size:clamp(24px,3.8vw,40px);font-weight:800;max-width:30ch}h2{font-size:clamp(20px,2.4vw,28px);margin-bottom:10px}h3{font-size:17px;margin-bottom:6px}
+p{max-width:72ch;margin:0 0 12px}.mute{color:var(--mute)}.small{font-size:14px}.lede{font-size:17px;margin-top:10px;color:#d6def0;max-width:72ch}
+.stamp{font-size:13.5px;color:#b9c6e4;margin:0 0 8px}
+nav.nav{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:15px;border-bottom:1px solid #2a4380;padding-bottom:6px}
+nav.nav a{color:#cfe0ff;text-decoration:none;border-bottom:2px solid transparent;padding:4px 0;flex:0 0 auto}
+nav.nav a.on{border-color:#ff4f8b;color:#fff;font-weight:600}
+.banner{border-radius:8px;padding:10px 14px;margin-top:14px;font-size:15px}
+.banner.warn{background:var(--ambg);color:var(--ink);border-left:5px solid var(--am)}
+.banner.stale{background:var(--rdbg);color:var(--ink);border-left:5px solid var(--rd)}
+.top .banner{color:#0f1730}
+.calls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;margin-top:18px}
+.call{background:#fff;color:#0f1730;border-radius:8px;padding:16px 18px;border-top:6px solid var(--c)}
+.call .who{font-size:14px;color:#5a6378}.call .what{font:800 28px/1.1 "Red Hat Display",sans-serif;color:var(--c);margin:4px 0 8px}
+.call ul{margin:0;padding-left:18px;font-size:15px}.call li{margin:3px 0}
+.call .chg{font-size:13px;color:#5a6378;margin-top:10px;border-top:1px solid #e3e7ef;padding-top:8px}
+.g{--c:#0f8a6a}.a{--c:#b07400}.r{--c:#c8102e}
+.frow{display:grid;grid-template-columns:11.5em minmax(0,1fr) 10em;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.frow .lab b{display:block;font-family:"Red Hat Display",sans-serif}.frow .lab span{font-size:13px;color:var(--mute)}
+.track{position:relative;height:38px}.track .base{position:absolute;top:0;bottom:4px;width:2px;background:var(--mag)}
+.track .rng{position:absolute;top:11px;height:12px;border-radius:6px;background:var(--rngc)}
+.track .pt{position:absolute;top:6px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--blue);border:3px solid var(--bg)}
+.track .act{position:absolute;top:8px;width:4px;height:18px;margin-left:-2px;background:var(--ink)}
+.track .lo,.track .hi{position:absolute;top:25px;font-size:12px;color:var(--mute);white-space:nowrap}
+.val{text-align:right}.val b{font:700 18px "Red Hat Display",sans-serif;display:block;white-space:nowrap}.val span{font-size:13px}
+.chip{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:10px;white-space:nowrap}
+.cg{background:var(--grbg);color:var(--gr)}.ca{background:var(--ambg);color:var(--am)}.cr{background:var(--rdbg);color:var(--rd)}
+.tline{font-size:13px;color:var(--mute);line-height:1.35}
+.trust{grid-column:1/-1;margin-top:-4px}
+.panel{background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-family:"Red Hat Display",sans-serif;font-size:14px}td.n,th.n{text-align:right;white-space:nowrap}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:26px}
+.callout{border-left:4px solid var(--mag);padding:4px 0 4px 16px;margin:16px 0}
+.prow{display:grid;grid-template-columns:7.5em minmax(0,1fr) 6em;gap:10px;align-items:center;margin:7px 0;font-size:15px}
+.pb{height:16px;background:var(--line);border-radius:3px;position:relative}.pb i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--blue)}
+.pb s{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.legend{display:flex;gap:8px 16px;flex-wrap:wrap;font-size:14px;margin-top:8px}.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.src{font-size:12.5px;color:var(--mute);margin-top:8px}
+.big{font:800 30px/1.1 "Red Hat Display",sans-serif}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;margin:12px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.kpi .k{font-size:13px;color:var(--mute)}.kpi .v{font:700 22px "Red Hat Display",sans-serif}
+.live{font-size:11.5px;font-weight:600;color:var(--am);white-space:nowrap}
+dl.gl{display:grid;grid-template-columns:minmax(9em,14em) 1fr;gap:8px 18px}dl.gl dt{font-weight:600}dl.gl dd{margin:0}
+svg text{fill:var(--mute);font-size:12px}
+.up{color:var(--gr)}.dn{color:var(--rd)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+footer{font-size:13px;color:var(--mute)}
+.fresh{display:inline-block;font-size:12.5px;color:#b9c6e4;margin-left:8px}.fresh i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3cd3a0;margin-right:5px;vertical-align:middle}
+.fresh.old i{background:#f0b44a}
+@media(max-width:640px){body{font-size:15px}.frow{grid-template-columns:1fr;gap:4px}.val{text-align:left}.prow{grid-template-columns:6.5em minmax(0,1fr) 4.5em}dl.gl{grid-template-columns:1fr}
+nav.nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:0 16px 6px}nav.nav::-webkit-scrollbar{display:none}nav.nav a{white-space:nowrap;flex:0 0 auto}
+.call .what{font-size:24px}th,td{padding:7px 6px}table{font-size:14px}.kpi .v{font-size:19px}.banner{font-size:14px}}
+</style>
+</head>
+<body>
+<header class="band top"><div class="wrap">
+<nav class="nav">{% for href, lab in nav %}<a href="{{ root }}{{ href }}" {% if href == page %}class="on"{% endif %}>{{ lab }}</a>{% endfor %}</nav>
+<p class="stamp" style="margin-top:14px">{{ stamp }}{% if live %} <span class="fresh" id="fresh"><i></i><span id="ago"></span></span>{% endif %}</p>
+{% for b in banners %}<div class="banner {{ b.kind }}">{{ b.text|safe }}</div>{% endfor %}
+<div style="margin-top:16px">{% block head %}<h1>{{ title }}</h1>{% endblock %}</div>
+</div></header>
+{% block body %}{% endblock %}
+<footer class="band"><div class="wrap">
+<p>Research to inform your decisions, not investment advice. The pool is a model allocation; no trades are placed by this system.
+Prices: Yahoo Finance. Figures before tax. Funds investing abroad are taxed differently from Indian equity funds, and tax where you live may also apply; check with an adviser.</p>
+<p>Snapshot {{ p.slot }} · made {{ p.made_at|when }} IST</p>
+</div></footer>
+{% if live %}<script>
+/* Auto-refresh: check every minute whether a newer update has been published; if so, reload. */
+(function(){var mine="{{ p.slot }}|{{ p.made_at }}",made=new Date("{{ p.made_at }}");
+function ago(){var m=Math.round((Date.now()-made)/60000),t=m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago";
+var e=document.getElementById("ago");if(e)e.textContent="updated "+t+" · refreshes automatically";var f=document.getElementById("fresh");if(f)f.className="fresh"+(m>180?" old":"")}
+function check(){fetch("{{ root }}version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(v){
+if(v.version&&v.version!==mine){var u=location.pathname+"?v="+encodeURIComponent(v.made_at)+location.hash;location.replace(u)}}).catch(function(){})}
+ago();setInterval(ago,30000);setInterval(check,60000);document.addEventListener("visibilitychange",function(){if(!document.hidden){check();ago()}})})();
+</script>{% endif %}
+</body></html>

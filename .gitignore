@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/market.db
+data/market.db-*
+data/logs/
+data/seed/
+site/
+launchd/
+# personal / research files stay on this Mac only (the repository is public)
+HANDOVER.md
+ANALYSIS.md
+reference/
+.claude/
+data/validation.json
