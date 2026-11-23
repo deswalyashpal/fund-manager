@@ -189,13 +189,26 @@ Prices: Yahoo Finance; Indian gold/silver: IBJA; news: public RSS feeds. Figures
 <p>Snapshot {{ p.slot }} · made {{ p.made_at|when }} IST</p>
 </div></footer>
 {% if live %}<script>
-/* Auto-refresh: check every minute whether a newer update has been published; if so, reload. */
-(function(){var mine="{{ p.slot }}|{{ p.made_at }}",made=new Date("{{ p.made_at }}");
-function ago(){var m=Math.round((Date.now()-made)/60000),t=m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago";
+/* Always show the latest update.
+   1. On opening (and every minute, and when the tab comes back) ask version.json, bypassing caches.
+   2. If a newer update exists, reload this page once with a version stamp so no saved copy is reused.
+   3. Every internal link carries the newest version stamp, so menu clicks never open a saved old page. */
+(function(){var made="{{ p.made_at }}",madeD=new Date(made),latest=made;
+function ago(){var m=Math.round((Date.now()-madeD)/60000),t=m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago";
 var e=document.getElementById("ago");if(e)e.textContent="updated "+t+" · refreshes automatically";var f=document.getElementById("fresh");if(f)f.className="fresh"+(m>180?" old":"")}
+function stamp(v){var q="v="+encodeURIComponent(v);document.querySelectorAll("a[href]").forEach(function(a){var h=a.getAttribute("href");
+ if(!h||/^(https?:|mailto:|#)/.test(h)||h.indexOf(".html")<0)return;var hash="",k=h.indexOf("#");if(k>=0){hash=h.slice(k);h=h.slice(0,k)}
+ h=h.replace(/[?&]v=[^&]*/,"").replace(/\?$/,"");a.setAttribute("href",h+(h.indexOf("?")>=0?"&":"?")+q+hash)})}
 function check(){fetch("{{ root }}version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(v){
-if(v.version&&v.version!==mine){var u=location.pathname+"?v="+encodeURIComponent(v.made_at)+location.hash;location.replace(u)}}).catch(function(){})}
-ago();setInterval(ago,30000);setInterval(check,60000);document.addEventListener("visibilitychange",function(){if(!document.hidden){check();ago()}})})();
+ if(!v.made_at||v.made_at<=made)return;latest=v.made_at;stamp(latest);
+ var tried="";try{tried=sessionStorage.getItem("fm_reload")||""}catch(e){}
+ if(tried===v.made_at)return;/* already reloaded once for this update: the server may still be catching up; retry next minute */
+ try{sessionStorage.setItem("fm_reload",v.made_at)}catch(e){}
+ location.replace(location.pathname+"?v="+encodeURIComponent(v.made_at)+location.hash)}).catch(function(){})}
+stamp(made);ago();check();setInterval(ago,30000);
+setInterval(function(){try{sessionStorage.removeItem("fm_reload")}catch(e){}check()},60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden){check();ago()}});
+window.addEventListener("pageshow",function(e){if(e.persisted)check()})})();
 </script>{% endif %}
 <script>
 /* Shared interactive line chart: range buttons, touch/hover read-out, optional range band, lines and forecast. */
