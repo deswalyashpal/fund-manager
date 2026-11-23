@@ -291,7 +291,7 @@ def _headline_lean(kind, now_utc):
     share = len(cnt[top]) / tot
     word = {"cut": "a rate cut", "hold": "no change in rates", "hike": "a rate hike"}[top]
     # Best example: a headline that states an expectation, not just mentions the word.
-    ex = next((x for x in cnt[top] if re.search(r"expect|likely|may |seen|poll|economists|forecast|odds|bets?|projects?|appears", x["title"], re.I)),
+    ex = next((x for x in cnt[top] if re.search(r"expect|likely|may (hike|raise|cut|need)|seen|poll|economists|predict|forecast|odds|bets?|projects?|appears certain", x["title"], re.I)),
               cnt[top][0])
     if share < 0.6:
         txt = f"Headlines are split; slightly more mention {word} ({len(cnt[top])} of {tot})."
