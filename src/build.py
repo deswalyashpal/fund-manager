@@ -65,7 +65,10 @@ def make_forecasts(store, job, now, slot, val):
         hhmm = now.strftime("%H:%M")
         dec = "08:45" if hhmm < "09:00" else "09:10"
         Rr = fc.preopen_rows(store, dec)
-        pf, feats = fc.preopen_forecast(store, today, last_day, now, dec, Rr)
+        # Clock the inputs at the scheduled decision time, never later: a late (cloud-delayed or manual)
+        # run must not see futures/Asia prices from after 08:45/09:10 IST.
+        t_dec = min(now, ist(today, dec))
+        pf, feats = fc.preopen_forecast(store, today, last_day, t_dec, dec, Rr)
         extra["preopen_features"] = feats
         extra["preopen"] = pf
         if pf:
