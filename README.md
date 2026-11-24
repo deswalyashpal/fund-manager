@@ -34,14 +34,14 @@ The jobs run on GitHub's servers through `.github/workflows/jobs.yml`, so the Ma
 Every open page checks `version.json` once a minute and reloads itself when a newer update is published.
 
 **Triggers.** cron-job.org starts the workflow on time with two entries (GitHub's own timer runs the same two as a backup; a late GitHub run maps back to its slot and skips if it is already done):
-- every hour at :20 IST, all days, with `job=timer`;
+- every hour at :30 IST, all days, with `job=timer` (GitHub's backup fires at :20; any time from :20 to :19 of the next hour maps to that hour's slot);
 - 09:10 IST Mon–Fri, with `job=preopen`.
 
 `timer` picks the job from the India time:
 
-| Hour (IST, at :20) | Job |
+| Hour (IST) | Job |
 |---|---|
-| Mon–Fri 10–15 | hourly (in-session forecasts; 14:20 is the last before the 3 pm cut-off) |
+| Mon–Fri 10–15 | hourly (in-session forecasts; the 14:xx run is the last before the 3 pm cut-off) |
 | Mon–Fri 16 | close |
 | Tue–Sat 03 | us_close |
 | Sat 10 | weekly |
