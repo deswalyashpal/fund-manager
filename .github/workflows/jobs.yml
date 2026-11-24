@@ -67,9 +67,13 @@ jobs:
           gh release download state -p validation.json -D data --clobber || cp bootstrap/validation.json data/validation.json
 
       - name: Run job
+        id: run
+        env:
+          TRIGGER: ${{ github.event_name }}
         run: python jobs/run.py "${{ steps.pick.outputs.job }}"
 
       - name: Save database
+        if: steps.run.outputs.skipped != 'true'
         run: |
           gzip -kf data/market.db
           gh release view state >/dev/null 2>&1 || gh release create state --title "Database state" --notes "Saved automatically after every job. Do not delete." --latest=false
@@ -84,11 +88,14 @@ jobs:
           git add bootstrap/last_weekly_run.txt
           git commit -m "Weekly heartbeat" && git push || true
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.run.outputs.skipped != 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.run.outputs.skipped != 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deploy
+        if: steps.run.outputs.skipped != 'true'
         uses: actions/deploy-pages@v4
         continue-on-error: true
       # GitHub sometimes can't see a just-uploaded page bundle; wait and try once more.

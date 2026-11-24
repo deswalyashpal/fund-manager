@@ -6,6 +6,7 @@ Re-running the same slot replaces that slot's rows (idempotent); history is neve
 """
 import argparse
 import logging
+import os
 import sys
 import traceback
 from datetime import timedelta
@@ -42,6 +43,16 @@ def no_session_today(con, now):
     return r == 0
 
 
+def skipped(reason):
+    """Tell the cloud workflow there is nothing new to save or publish (so it keeps the current site)."""
+    print(reason)
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        with open(out, "a") as f:
+            f.write("skipped=true\n")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("job", choices=JOBS)
@@ -57,12 +68,14 @@ def main(argv=None):
     con = db.connect()
     india_day = now.date()
     if job == "monthly" and not a.force and not a.at and now.day > 7:
-        print("monthly: runs on the first Saturday of the month only (use --force)")
-        return 0
+        return skipped("monthly: runs on the first Saturday of the month only (use --force)")
     if job in MARKET_DAY_JOBS and not is_trading_day(india_day):
         logging.info("%s skipped: %s is not a trading day", job, india_day)
-        print(f"{job}: {india_day} is not a trading day; nothing to do")
-        return 0
+        return skipped(f"{job}: {india_day} is not a trading day; nothing to do")
+    # GitHub's own timer often fires 30-60 min late. When the on-time trigger (cron-job.org) has already
+    # done this slot, the late duplicate does nothing.
+    if os.environ.get("TRIGGER") == "schedule" and con.execute("SELECT 1 FROM snapshots WHERE slot=?", (slot,)).fetchone():
+        return skipped(f"{job}: slot {slot} was already done on time; skipping the late GitHub run")
     try:
         if not a.no_fetch:
             rep = fetch.update(con, now.tz_convert("UTC"), hourly=True,
@@ -70,8 +83,7 @@ def main(argv=None):
             fetch.quality(con, slot, now.tz_convert("UTC"), rep)
         if job in ("hourly", "decision") and no_session_today(con, now):
             logging.info("%s: no Sensex bars today -> treating %s as a market holiday", job, india_day)
-            print(f"{job}: no Sensex trading detected today; add {india_day} to holidays in config.yaml if this is a holiday")
-            return 0
+            return skipped(f"{job}: no Sensex trading detected today; add {india_day} to holidays in config.yaml if this is a holiday")
         if job == "monthly":
             validate.run(con, backfill_days=0)
         payload = build.run(job, now, slot, con, online=not a.no_fetch)
