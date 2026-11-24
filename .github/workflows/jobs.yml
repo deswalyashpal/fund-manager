@@ -1,19 +1,14 @@
 # Runs the fund-manager jobs on GitHub's servers and publishes the site to GitHub Pages.
-# Times are UTC (IST - 5:30). GitHub may start scheduled runs a few minutes late; each run
-# files itself under the latest scheduled slot, so a late start is harmless.
+# Times are UTC (IST - 5:30). The on-time trigger is cron-job.org (two entries calling workflow_dispatch:
+# hourly at :20 with job=timer, and 09:10 Mon-Fri with job=preopen). GitHub's own timer below is the backup.
 name: Fund manager jobs
 
 on:
   schedule:
-    - cron: "15 3 * * 1-5"    # preopen 08:45 IST
-    - cron: "40 3 * * 1-5"    # preopen 09:10 IST
-    - cron: "50 4-9 * * 1-5"  # hourly 10:20-15:20 IST
-    - cron: "10 9 * * 1-5"    # decision 14:40 IST (3 pm cut-off)
-    - cron: "45 10 * * 1-5"   # close 16:15 IST
-    - cron: "0 18 * * 1-5"    # evening 23:30 IST
-    - cron: "30 21 * * 1-5"   # us_close 03:00 IST (Tue-Sat)
-    - cron: "30 4 * * 6"      # weekly Sat 10:00 IST
-    - cron: "30 5 * * 6"      # monthly 1st Sat 11:00 IST (the job skips other Saturdays)
+    # Backup only: cron-job.org triggers the same two runs on time. GitHub's timer can be 30-60 min
+    # late; a late run maps back to the slot it belongs to and skips if that slot is already done.
+    - cron: "50 * * * *"     # every hour at :20 IST -> auto (hourly / close / us_close / weekly / monthly / refresh)
+    - cron: "40 3 * * 1-5"   # preopen 09:10 IST, Mon-Fri
   workflow_dispatch:
     inputs:
       job:
@@ -21,7 +16,7 @@ on:
         required: true
         default: auto
         type: choice
-        options: [auto, preopen, hourly, decision, close, evening, us_close, weekly, monthly]
+        options: [auto, timer, preopen, hourly, decision, close, evening, us_close, weekly, monthly, refresh]
 
 permissions:
   contents: write   # update the database stored as a release asset

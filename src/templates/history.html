@@ -3,12 +3,12 @@
 {% block body %}
 <section class="band"><div class="wrap">
 <div class="sec-h"><h2>Updates</h2>
-  <div class="seg" id="hf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="chg">Only call changes</button></div></div>
+  <div class="seg" id="hf"><button type="button" class="on" data-f="main">Main updates</button><button type="button" data-f="all">All, incl. hourly refreshes</button><button type="button" data-f="chg">Only call changes</button></div></div>
 <div class="filters"><label>Day <select id="fd"><option value="">All days</option>{% for d in dates %}<option value="{{ d }}">{{ d|day }}</option>{% endfor %}</select></label></div>
 <div class="card" style="padding:6px 12px">
 <div class="tw"><table id="ht">
 <tr><th>When (IST)</th><th>Sensex</th><th>Pool</th><th>Metals</th><th class="n">Close forecast</th></tr>
-{% for s in snaps %}<tr data-d="{{ s.date }}" data-c="{{ s.changed|join(',') }}">
+{% for s in snaps %}<tr data-d="{{ s.date }}" data-c="{{ s.changed|join(',') }}" data-j="{{ s.job }}">
 <td><a href="snap/{{ s.id }}.html">{{ s.when }}</a><br><span class="small mute">{{ s.job }}</span></td>
 {% for c in s.calls %}<td><span class="chip {{ {'green':'cg','amber':'ca','red':'cr'}[c.light] }}">{{ c.action }}</span>{% if c.changed %} <b title="changed" style="color:var(--mag)">●</b>{% endif %}</td>{% endfor %}
 <td class="n">{{ s.close_fc|n0 if s.close_fc else '—' }}<br><span class="small mute">{{ s.close_rng }}</span></td></tr>{% endfor %}
@@ -46,15 +46,16 @@
 <dt>3 pm cut-off</dt><dd>Index-fund orders before 3:00 pm IST get that day's closing price.</dd>
 </dl>
 </div></details>
-<details class="fold"><summary>How often does this page update?</summary><div class="in"><p>On trading days at 08:45 and 09:10 (before the open), every hour from 10:20 to 15:20, at 14:40 (before the 3 pm cut-off), 16:15 (after the close), 23:30 and 03:00 IST, plus Saturday checks. Any open page reloads itself when a new update is published.</p></div></details>
+<details class="fold"><summary>How often does this page update?</summary><div class="in"><p>Every hour at about :20 past, day and night. On trading days: the morning forecast at 09:10, in-session forecasts at 10:20–15:20 (the 14:20 one is the last before the 3 pm cut-off), after the close at 16:20, and after the US close at 03:20 IST. Other hours refresh prices, news, gold/silver and events. Saturday: the weekly pool check (and the monthly reset on the first Saturday). Any open page shows a new update within a minute.</p></div></details>
 <details class="fold"><summary>Where does the data come from?</summary><div class="in"><p>Prices: Yahoo Finance. Indian gold/silver: IBJA. US Fed range: FRED. News: Economic Times, Mint, Business Standard, CNBC, MarketWatch and Google News feeds, picked by fixed rules (no AI). Research to inform decisions, not investment advice.</p></div></details>
 </div>
 </div>
 </div></section>
 <script>
-(function(){var f="all",d=document.getElementById("fd");
-function go(){document.querySelectorAll("#ht tr[data-d]").forEach(function(r){r.style.display=((!d.value||r.dataset.d===d.value)&&(f==="all"||r.dataset.c))?"":"none"})}
+(function(){var f="main",d=document.getElementById("fd");
+function go(){document.querySelectorAll("#ht tr[data-d]").forEach(function(r){var ok=f==="all"||(f==="main"&&r.dataset.j!=="refresh")||(f==="chg"&&r.dataset.c);
+ r.style.display=((!d.value||r.dataset.d===d.value)&&ok)?"":"none"})}
 document.getElementById("hf").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});f=b.dataset.f;go()});
-d.addEventListener("change",go);if(location.hash==="#help")document.getElementById("help").scrollIntoView()})();
+d.addEventListener("change",go);go();if(location.hash==="#help")document.getElementById("help").scrollIntoView()})();
 </script>
 {% endblock %}

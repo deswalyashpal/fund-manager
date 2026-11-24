@@ -115,3 +115,19 @@ def test_full_site_renders_from_scratch(tmp_path, frozen_db):
     render.render_all(con, payload, out)
     assert (out / "index.html").exists() and (out / "metals.html").exists()
     assert len(list((out / "snap").glob("*.html"))) >= 1
+
+
+def test_timer_picks_the_right_job():
+    """The hourly :20 trigger maps India time to the right job; late starts map back to their slot."""
+    import importlib.util
+    from datetime import datetime
+    sp = importlib.util.spec_from_file_location("pick_job", ROOT / ".github" / "pick_job.py")
+    pj = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(pj)
+    t = lambda s: datetime.strptime(s, "%Y-%m-%d %H:%M").replace(tzinfo=pj.IST)
+    cases = {"2026-11-24 08:20": "refresh", "2026-11-24 10:20": "hourly", "2026-11-24 11:05": "hourly",
+             "2026-11-24 16:20": "close", "2026-11-25 03:20": "us_close", "2026-11-28 10:20": "weekly",
+             "2026-12-05 11:20": "monthly", "2026-11-28 11:20": "refresh", "2026-11-29 15:20": "refresh"}
+    for s, job in cases.items():
+        assert pj.auto(t(s)) == job, s
+    assert pj.auto(t("2026-11-24 08:40"), manual=True) == "preopen"

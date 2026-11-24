@@ -33,18 +33,23 @@ The jobs run on GitHub's servers through `.github/workflows/jobs.yml`, so the Ma
 
 Every open page checks `version.json` once a minute and reloads itself when a newer update is published.
 
-| Job | IST (Mon–Fri) | UTC cron |
-|---|---|---|
-| preopen | 08:45, 09:10 | 03:15, 03:40 |
-| hourly | 10:20 … 15:20 | 04:50 … 09:50 |
-| decision (3 pm cut-off) | 14:40 | 09:10 |
-| close | 16:15 | 10:45 |
-| evening | 23:30 | 18:00 |
-| us_close | 03:00 (Tue–Sat) | 21:30 (Mon–Fri) |
-| weekly | Sat 10:00 | Sat 04:30 |
-| monthly | 1st Sat 11:00 | Sat 05:30 |
+**Triggers.** cron-job.org starts the workflow on time with two entries (GitHub's own timer runs the same two as a backup; a late GitHub run maps back to its slot and skips if it is already done):
+- every hour at :20 IST, all days, with `job=timer`;
+- 09:10 IST Mon–Fri, with `job=preopen`.
 
-- **Late starts:** GitHub can start scheduled runs 5–30 minutes late. Each run still files under its scheduled slot.
+`timer` picks the job from the India time:
+
+| Hour (IST, at :20) | Job |
+|---|---|
+| Mon–Fri 10–15 | hourly (in-session forecasts; 14:20 is the last before the 3 pm cut-off) |
+| Mon–Fri 16 | close |
+| Tue–Sat 03 | us_close |
+| Sat 10 | weekly |
+| First Sat 11 | monthly |
+| every other hour | refresh (prices, news, gold/silver, events, page; no new forecasts) |
+
+Hourly refresh snapshots are kept for 30 days; everything else is kept forever.
+
 - **Manual runs:** open the repository's **Actions** tab, choose "Fund manager jobs" and click "Run workflow". The default, **auto**, picks the right job for the current India time.
 - **Keeping the schedule alive:** the weekly job commits a heartbeat file, because GitHub pauses schedules after 60 days without commits.
 
